@@ -311,6 +311,43 @@ var _ = Describe("Daemon Integration", func() {
 				Expect(fdbEntries).NotTo(ContainSubstring("ee:ee:0a:ff:28:00 dst 172.17.0.5 self permanent"))
 			})
 		})
+
+		Context("when the controller returns leases outside of my overlay network", func() {
+			BeforeEach(func() {
+				indexHandler := &testsupport.FakeHandler{
+					ResponseCode: 200,
+					ResponseBody: map[string][]controller.Lease{
+						"leases": []controller.Lease{
+							{ // in our overlay
+								UnderlayIP:          localIP,
+								OverlaySubnet:       "10.255.30.0/24",
+								OverlayHardwareAddr: "ee:ee:0a:ff:1e:00",
+							}, { // not in our overlay
+								UnderlayIP:          "172.17.0.4",
+								OverlaySubnet:       "10.254.40.0/24",
+								OverlayHardwareAddr: "ee:ee:0a:fe:28:00",
+							}, { // in our overlay
+								UnderlayIP:          "172.17.0.5",
+								OverlaySubnet:       "10.255.40.0/24",
+								OverlayHardwareAddr: "ee:ee:0a:ff:28:00",
+							},
+						},
+					},
+				}
+
+			})
+			It("only updates the leases inside the overlay network", func() {
+				By("checking that the correct leases are logged")
+				Eventually(session.Out, 2).Should(gbytes.Say(`silk-daemon.get-routable-leases.*log_level.*0`))
+				Eventually(session.Out, 2).Should(gbytes.Say(fmt.Sprintf(`underlay_ip.*%s.*overlay_subnet.*10.255.30.0/24.*overlay_hardware_addr.*ee:ee:0a:ff:1e:00`, localIP)))
+				Eventually(session.Out, 2).Should(gbytes.Say(`underlay_ip.*172.17.0.5.*overlay_subnet.*10.255.40.0/24.*overlay_hardware_addr.*ee:ee:0a:ff:28:00`))
+
+				By("checking that skipping the nonroutable leases is logged")
+				Eventually(session.Out, 2).Should(gbytes.Say(`silk-daemon.skip-nonroutable-leases.*log_level.*0.*non-routable-lease-count.*1`))
+
+				By("checking the arp fdb and routing are correct")
+			})
+		})
 	})
 
 	Context("when a local lease is discovered but it cannot be renewed", func() {
