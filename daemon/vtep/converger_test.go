@@ -355,5 +355,40 @@ var _ = Describe("Converger", func() {
 				Expect(err).To(MatchError("del neigh: mango"))
 			})
 		})
+
+		Context("when there are remote leases that are not in the overlay network", func() {
+			BeforeEach(func() {
+				leases = []controller.Lease{
+					controller.Lease{ // in overlay
+						UnderlayIP:    "10.10.0.4",
+						OverlaySubnet: "10.255.32.0/24",
+					},
+					controller.Lease{ // not in overlay
+						UnderlayIP:    "10.10.0.3",
+						OverlaySubnet: "10.254.11.0/24",
+					},
+					controller.Lease{ // in overlay
+						UnderlayIP:    "10.10.0.5",
+						OverlaySubnet: "10.255.19.0/24",
+					},
+				}
+
+			})
+			It("does not touch them and adds only the leases in the overlay network", func() {
+				err := converger.Converge(leases)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeNetlink.RouteReplaceCallCount()).To(Equal(1))
+				addedRoute := fakeNetlink.RouteReplaceArgsForCall(0)
+				destGW, destNet, _ := net.ParseCIDR("10.255.19.0/24")
+				Expect(addedRoute).To(Equal(&netlink.Route{
+					LinkIndex: 42,
+					Scope:     netlink.SCOPE_UNIVERSE,
+					Dst:       destNet,
+					Gw:        destGW,
+					Src:       net.ParseIP("10.255.32.0").To4(),
+				}))
+			})
+		})
 	})
 })
