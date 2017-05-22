@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"time"
 
+	"code.cloudfoundry.org/go-db-helpers/db"
 	"code.cloudfoundry.org/go-db-helpers/testsupport"
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/silk/controller"
@@ -23,17 +24,17 @@ import (
 )
 
 var (
-	testDatabase   *testsupport.TestDatabase
 	session        *gexec.Session
 	conf           config.Config
+	dbConf         db.Config
 	testClient     *controller.Client
 	configFilePath string
 	baseURL        string
 )
 var _ = BeforeEach(func() {
-	dbName := fmt.Sprintf("test_database_%x", GinkgoParallelNode())
-	dbConnectionInfo := testsupport.GetDBConnectionInfo()
-	testDatabase = dbConnectionInfo.CreateDatabase(dbName)
+	dbConf = testsupport.GetDBConfig()
+	dbConf.DatabaseName = fmt.Sprintf("test_database_%x", GinkgoParallelNode())
+	testsupport.CreateDatabase(dbConf)
 
 	conf = config.Config{
 		ListenHost:             "127.0.0.1",
@@ -44,7 +45,7 @@ var _ = BeforeEach(func() {
 		ServerKeyFile:          "fixtures/server.key",
 		Network:                "10.255.0.0/16",
 		SubnetPrefixLength:     24,
-		Database:               testDatabase.DBConfig(),
+		Database:               dbConf,
 		LeaseExpirationSeconds: 60,
 	}
 	baseURL = fmt.Sprintf("https://%s:%d", conf.ListenHost, conf.ListenPort)
@@ -54,9 +55,8 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	stopServer()
-	if testDatabase != nil {
-		testDatabase.Destroy()
-	}
+	err := testsupport.RemoveDatabase(dbConf)
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = Describe("Silk Controller", func() {

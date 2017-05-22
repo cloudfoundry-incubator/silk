@@ -36,8 +36,13 @@ var _ = Describe("Config.ReadFromFile", func() {
 			"network":              "10.255.0.0/16",
 			"subnet_prefix_length": 24,
 			"database": db.Config{
-				Type:             "mysql",
-				ConnectionString: "some-connection-string",
+				Type:         "mysql",
+				User:         "some-user",
+				Password:     "some-password",
+				Host:         "some-host",
+				Port:         uint16(12345),
+				Timeout:      5,
+				DatabaseName: "some-database",
 			},
 			"lease_expiration_time": 12,
 		}

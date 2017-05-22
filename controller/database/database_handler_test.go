@@ -22,24 +22,24 @@ import (
 var _ = Describe("DatabaseHandler", func() {
 	var (
 		databaseHandler    *database.DatabaseHandler
-		realDb             *sqlx.DB
 		realMigrateAdapter *database.MigrateAdapter
-		testDatabase       *testsupport.TestDatabase
-		mockDb             *fakes.Db
 		mockMigrateAdapter *fakes.MigrateAdapter
+		realDb             *sqlx.DB
+		mockDb             *fakes.Db
 		lease              controller.Lease
 		lease2             controller.Lease
+		dbConf             db.Config
 	)
 	BeforeEach(func() {
 		mockDb = &fakes.Db{}
 		mockMigrateAdapter = &fakes.MigrateAdapter{}
 
-		dbName := fmt.Sprintf("test_db_%03d_%x", GinkgoParallelNode(), rand.Int())
-		dbConnectionInfo := testsupport.GetDBConnectionInfo()
-		testDatabase = dbConnectionInfo.CreateDatabase(dbName)
+		dbConf = testsupport.GetDBConfig()
+		dbConf.DatabaseName = fmt.Sprintf("test_db_%03d_%x", GinkgoParallelNode(), rand.Int())
+		testsupport.CreateDatabase(dbConf)
 
 		var err error
-		realDb, err = db.GetConnectionPool(testDatabase.DBConfig())
+		realDb, err = db.GetConnectionPool(dbConf)
 		Expect(err).NotTo(HaveOccurred())
 
 		realMigrateAdapter = &database.MigrateAdapter{}
@@ -61,9 +61,7 @@ var _ = Describe("DatabaseHandler", func() {
 		if realDb != nil {
 			Expect(realDb.Close()).To(Succeed())
 		}
-		if testDatabase != nil {
-			testDatabase.Destroy()
-		}
+		testsupport.RemoveDatabase(dbConf)
 	})
 
 	Describe("Migrate", func() {
