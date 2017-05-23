@@ -19,7 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-const DEFAULT_TIMEOUT = "5s"
+const DEFAULT_TIMEOUT = "10s"
 
 func DefaultTestConfig(dbConf db.Config, fixturesPath string) config.Config {
 	return config.Config{

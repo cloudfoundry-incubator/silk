@@ -1,9 +1,11 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"code.cloudfoundry.org/silk/controller"
 
@@ -19,8 +21,11 @@ var MultipleRecordsAffectedError = errors.New("multiple records affected")
 //go:generate counterfeiter -o fakes/db.go --fake-name Db . Db
 type Db interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	DriverName() string
 }
 
@@ -33,9 +38,10 @@ type DatabaseHandler struct {
 	migrator   migrateAdapter
 	migrations *migrate.MemoryMigrationSource
 	db         Db
+	timeout    time.Duration
 }
 
-func NewDatabaseHandler(migrator migrateAdapter, db Db) *DatabaseHandler {
+func NewDatabaseHandler(migrator migrateAdapter, db Db, timeout time.Duration) *DatabaseHandler {
 	return &DatabaseHandler{
 		migrator: migrator,
 		migrations: &migrate.MemoryMigrationSource{
@@ -47,13 +53,15 @@ func NewDatabaseHandler(migrator migrateAdapter, db Db) *DatabaseHandler {
 				},
 			},
 		},
-		db: db,
+		db:      db,
+		timeout: timeout,
 	}
 }
 
 func (d *DatabaseHandler) All() ([]controller.Lease, error) {
 	leases := []controller.Lease{}
-	rows, err := d.db.Query("SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets")
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	rows, err := d.db.QueryContext(ctx, "SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets")
 	if err != nil {
 		return nil, fmt.Errorf("selecting all subnets: %s", err)
 	}
@@ -79,7 +87,8 @@ func (d *DatabaseHandler) AllActive(duration int) ([]controller.Lease, error) {
 		return nil, err
 	}
 	leases := []controller.Lease{}
-	rows, err := d.db.Query(fmt.Sprintf("SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets WHERE last_renewed_at + %d > %s", duration, timestamp))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	rows, err := d.db.QueryContext(ctx, fmt.Sprintf("SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets WHERE last_renewed_at + %d > %s", duration, timestamp))
 	if err != nil {
 		return nil, fmt.Errorf("selecting all active subnets: %s", err)
 	}
@@ -106,7 +115,8 @@ func (d *DatabaseHandler) OldestExpired(expirationTime int) (*controller.Lease, 
 	}
 
 	var underlayIP, overlaySubnet, overlayHWAddr string
-	result := d.db.QueryRow(fmt.Sprintf("SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets WHERE last_renewed_at + %d <= %s ORDER BY last_renewed_at ASC LIMIT 1", expirationTime, timestamp))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	result := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT underlay_ip, overlay_subnet, overlay_hwaddr FROM subnets WHERE last_renewed_at + %d <= %s ORDER BY last_renewed_at ASC LIMIT 1", expirationTime, timestamp))
 	err = result.Scan(&underlayIP, &overlaySubnet, &overlayHWAddr)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -137,7 +147,8 @@ func (d *DatabaseHandler) AddEntry(lease controller.Lease) error {
 	}
 
 	query := fmt.Sprintf("INSERT INTO subnets (underlay_ip, overlay_subnet, overlay_hwaddr, last_renewed_at) VALUES ('%s', '%s', '%s', %s)", lease.UnderlayIP, lease.OverlaySubnet, lease.OverlayHardwareAddr, timestamp)
-	_, err = d.db.Exec(query)
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	_, err = d.db.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("adding entry: %s", err)
 	}
@@ -145,7 +156,8 @@ func (d *DatabaseHandler) AddEntry(lease controller.Lease) error {
 }
 
 func (d *DatabaseHandler) DeleteEntry(underlayIP string) error {
-	result, err := d.db.Exec(fmt.Sprintf("DELETE FROM subnets WHERE underlay_ip = '%s'", underlayIP))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	result, err := d.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM subnets WHERE underlay_ip = '%s'", underlayIP))
 	if err != nil {
 		return fmt.Errorf("deleting entry: %s", err)
 	}
@@ -164,7 +176,8 @@ func (d *DatabaseHandler) DeleteEntry(underlayIP string) error {
 
 func (d *DatabaseHandler) LeaseForUnderlayIP(underlayIP string) (*controller.Lease, error) {
 	var overlaySubnet, overlayHWAddr string
-	result := d.db.QueryRow(fmt.Sprintf("SELECT overlay_subnet, overlay_hwaddr FROM subnets WHERE underlay_ip = '%s'", underlayIP))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	result := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT overlay_subnet, overlay_hwaddr FROM subnets WHERE underlay_ip = '%s'", underlayIP))
 	err := result.Scan(&overlaySubnet, &overlayHWAddr)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -186,7 +199,8 @@ func (d *DatabaseHandler) RenewLeaseForUnderlayIP(underlayIP string) error {
 	}
 
 	query := fmt.Sprintf("UPDATE subnets SET last_renewed_at = %s WHERE underlay_ip = '%s'", timestamp, underlayIP)
-	_, err = d.db.Exec(query)
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	_, err = d.db.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("renewing lease: %s", err)
 	}
@@ -195,7 +209,8 @@ func (d *DatabaseHandler) RenewLeaseForUnderlayIP(underlayIP string) error {
 
 func (d *DatabaseHandler) LastRenewedAtForUnderlayIP(underlayIP string) (int64, error) {
 	var lastRenewedAt int64
-	result := d.db.QueryRow(fmt.Sprintf("SELECT last_renewed_at FROM subnets WHERE underlay_ip = '%s'", underlayIP))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	result := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT last_renewed_at FROM subnets WHERE underlay_ip = '%s'", underlayIP))
 	err := result.Scan(&lastRenewedAt)
 	if err != nil {
 		return 0, err
@@ -205,7 +220,8 @@ func (d *DatabaseHandler) LastRenewedAtForUnderlayIP(underlayIP string) (int64, 
 
 func (d *DatabaseHandler) SubnetForUnderlayIP(underlayIP string) (string, error) {
 	var subnet string
-	result := d.db.QueryRow(fmt.Sprintf("SELECT subnet FROM subnets WHERE underlay_ip = '%s'", underlayIP))
+	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
+	result := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT subnet FROM subnets WHERE underlay_ip = '%s'", underlayIP))
 	err := result.Scan(&subnet)
 	if err != nil {
 		return "", err
