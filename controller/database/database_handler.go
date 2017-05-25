@@ -186,6 +186,9 @@ func rollback(tx Transaction, err error) error {
 func (d *DatabaseHandler) DeleteEntry(underlayIP string) error {
 	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
 
+	// For reasons we don't understand, postgres db.ExecContext does
+	// not time out on network partition. But exec w/ transaction
+	// correctly times out. So we want to use a transaction here.
 	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %s", err)
