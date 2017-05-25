@@ -16,10 +16,6 @@ type HardwareAddressGenerator struct {
 		result1 net.HardwareAddr
 		result2 error
 	}
-	generateForContainerReturnsOnCall map[int]struct {
-		result1 net.HardwareAddr
-		result2 error
-	}
 	GenerateForHostStub        func(containerIP net.IP) (net.HardwareAddr, error)
 	generateForHostMutex       sync.RWMutex
 	generateForHostArgsForCall []struct {
@@ -29,17 +25,12 @@ type HardwareAddressGenerator struct {
 		result1 net.HardwareAddr
 		result2 error
 	}
-	generateForHostReturnsOnCall map[int]struct {
-		result1 net.HardwareAddr
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *HardwareAddressGenerator) GenerateForContainer(containerIP net.IP) (net.HardwareAddr, error) {
 	fake.generateForContainerMutex.Lock()
-	ret, specificReturn := fake.generateForContainerReturnsOnCall[len(fake.generateForContainerArgsForCall)]
 	fake.generateForContainerArgsForCall = append(fake.generateForContainerArgsForCall, struct {
 		containerIP net.IP
 	}{containerIP})
@@ -47,9 +38,6 @@ func (fake *HardwareAddressGenerator) GenerateForContainer(containerIP net.IP) (
 	fake.generateForContainerMutex.Unlock()
 	if fake.GenerateForContainerStub != nil {
 		return fake.GenerateForContainerStub(containerIP)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.generateForContainerReturns.result1, fake.generateForContainerReturns.result2
 }
@@ -74,23 +62,8 @@ func (fake *HardwareAddressGenerator) GenerateForContainerReturns(result1 net.Ha
 	}{result1, result2}
 }
 
-func (fake *HardwareAddressGenerator) GenerateForContainerReturnsOnCall(i int, result1 net.HardwareAddr, result2 error) {
-	fake.GenerateForContainerStub = nil
-	if fake.generateForContainerReturnsOnCall == nil {
-		fake.generateForContainerReturnsOnCall = make(map[int]struct {
-			result1 net.HardwareAddr
-			result2 error
-		})
-	}
-	fake.generateForContainerReturnsOnCall[i] = struct {
-		result1 net.HardwareAddr
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *HardwareAddressGenerator) GenerateForHost(containerIP net.IP) (net.HardwareAddr, error) {
 	fake.generateForHostMutex.Lock()
-	ret, specificReturn := fake.generateForHostReturnsOnCall[len(fake.generateForHostArgsForCall)]
 	fake.generateForHostArgsForCall = append(fake.generateForHostArgsForCall, struct {
 		containerIP net.IP
 	}{containerIP})
@@ -98,9 +71,6 @@ func (fake *HardwareAddressGenerator) GenerateForHost(containerIP net.IP) (net.H
 	fake.generateForHostMutex.Unlock()
 	if fake.GenerateForHostStub != nil {
 		return fake.GenerateForHostStub(containerIP)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.generateForHostReturns.result1, fake.generateForHostReturns.result2
 }
@@ -120,20 +90,6 @@ func (fake *HardwareAddressGenerator) GenerateForHostArgsForCall(i int) net.IP {
 func (fake *HardwareAddressGenerator) GenerateForHostReturns(result1 net.HardwareAddr, result2 error) {
 	fake.GenerateForHostStub = nil
 	fake.generateForHostReturns = struct {
-		result1 net.HardwareAddr
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *HardwareAddressGenerator) GenerateForHostReturnsOnCall(i int, result1 net.HardwareAddr, result2 error) {
-	fake.GenerateForHostStub = nil
-	if fake.generateForHostReturnsOnCall == nil {
-		fake.generateForHostReturnsOnCall = make(map[int]struct {
-			result1 net.HardwareAddr
-			result2 error
-		})
-	}
-	fake.generateForHostReturnsOnCall[i] = struct {
 		result1 net.HardwareAddr
 		result2 error
 	}{result1, result2}

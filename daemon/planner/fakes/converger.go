@@ -16,9 +16,6 @@ type Converger struct {
 	convergeReturns struct {
 		result1 error
 	}
-	convergeReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -30,7 +27,6 @@ func (fake *Converger) Converge(arg1 []controller.Lease) error {
 		copy(arg1Copy, arg1)
 	}
 	fake.convergeMutex.Lock()
-	ret, specificReturn := fake.convergeReturnsOnCall[len(fake.convergeArgsForCall)]
 	fake.convergeArgsForCall = append(fake.convergeArgsForCall, struct {
 		arg1 []controller.Lease
 	}{arg1Copy})
@@ -38,9 +34,6 @@ func (fake *Converger) Converge(arg1 []controller.Lease) error {
 	fake.convergeMutex.Unlock()
 	if fake.ConvergeStub != nil {
 		return fake.ConvergeStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.convergeReturns.result1
 }
@@ -60,18 +53,6 @@ func (fake *Converger) ConvergeArgsForCall(i int) []controller.Lease {
 func (fake *Converger) ConvergeReturns(result1 error) {
 	fake.ConvergeStub = nil
 	fake.convergeReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Converger) ConvergeReturnsOnCall(i int, result1 error) {
-	fake.ConvergeStub = nil
-	if fake.convergeReturnsOnCall == nil {
-		fake.convergeReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.convergeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

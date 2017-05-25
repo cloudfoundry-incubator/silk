@@ -15,25 +15,17 @@ type LeaseRepository struct {
 		result1 []controller.Lease
 		result2 error
 	}
-	routableLeasesReturnsOnCall map[int]struct {
-		result1 []controller.Lease
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *LeaseRepository) RoutableLeases() ([]controller.Lease, error) {
 	fake.routableLeasesMutex.Lock()
-	ret, specificReturn := fake.routableLeasesReturnsOnCall[len(fake.routableLeasesArgsForCall)]
 	fake.routableLeasesArgsForCall = append(fake.routableLeasesArgsForCall, struct{}{})
 	fake.recordInvocation("RoutableLeases", []interface{}{})
 	fake.routableLeasesMutex.Unlock()
 	if fake.RoutableLeasesStub != nil {
 		return fake.RoutableLeasesStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.routableLeasesReturns.result1, fake.routableLeasesReturns.result2
 }
@@ -47,20 +39,6 @@ func (fake *LeaseRepository) RoutableLeasesCallCount() int {
 func (fake *LeaseRepository) RoutableLeasesReturns(result1 []controller.Lease, result2 error) {
 	fake.RoutableLeasesStub = nil
 	fake.routableLeasesReturns = struct {
-		result1 []controller.Lease
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *LeaseRepository) RoutableLeasesReturnsOnCall(i int, result1 []controller.Lease, result2 error) {
-	fake.RoutableLeasesStub = nil
-	if fake.routableLeasesReturnsOnCall == nil {
-		fake.routableLeasesReturnsOnCall = make(map[int]struct {
-			result1 []controller.Lease
-			result2 error
-		})
-	}
-	fake.routableLeasesReturnsOnCall[i] = struct {
 		result1 []controller.Lease
 		result2 error
 	}{result1, result2}

@@ -18,16 +18,12 @@ type Common struct {
 	basicSetupReturns struct {
 		result1 error
 	}
-	basicSetupReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *Common) BasicSetup(deviceName string, local config.DualAddress, peer config.DualAddress) error {
 	fake.basicSetupMutex.Lock()
-	ret, specificReturn := fake.basicSetupReturnsOnCall[len(fake.basicSetupArgsForCall)]
 	fake.basicSetupArgsForCall = append(fake.basicSetupArgsForCall, struct {
 		deviceName string
 		local      config.DualAddress
@@ -37,9 +33,6 @@ func (fake *Common) BasicSetup(deviceName string, local config.DualAddress, peer
 	fake.basicSetupMutex.Unlock()
 	if fake.BasicSetupStub != nil {
 		return fake.BasicSetupStub(deviceName, local, peer)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.basicSetupReturns.result1
 }
@@ -59,18 +52,6 @@ func (fake *Common) BasicSetupArgsForCall(i int) (string, config.DualAddress, co
 func (fake *Common) BasicSetupReturns(result1 error) {
 	fake.BasicSetupStub = nil
 	fake.basicSetupReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *Common) BasicSetupReturnsOnCall(i int, result1 error) {
-	fake.BasicSetupStub = nil
-	if fake.basicSetupReturnsOnCall == nil {
-		fake.basicSetupReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.basicSetupReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

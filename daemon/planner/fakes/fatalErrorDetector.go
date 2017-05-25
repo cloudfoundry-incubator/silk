@@ -19,9 +19,6 @@ type FatalErrorDetector struct {
 	isFatalReturns struct {
 		result1 bool
 	}
-	isFatalReturnsOnCall map[int]struct {
-		result1 bool
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -44,7 +41,6 @@ func (fake *FatalErrorDetector) GotSuccessCallCount() int {
 
 func (fake *FatalErrorDetector) IsFatal(arg1 error) bool {
 	fake.isFatalMutex.Lock()
-	ret, specificReturn := fake.isFatalReturnsOnCall[len(fake.isFatalArgsForCall)]
 	fake.isFatalArgsForCall = append(fake.isFatalArgsForCall, struct {
 		arg1 error
 	}{arg1})
@@ -52,9 +48,6 @@ func (fake *FatalErrorDetector) IsFatal(arg1 error) bool {
 	fake.isFatalMutex.Unlock()
 	if fake.IsFatalStub != nil {
 		return fake.IsFatalStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.isFatalReturns.result1
 }
@@ -74,18 +67,6 @@ func (fake *FatalErrorDetector) IsFatalArgsForCall(i int) error {
 func (fake *FatalErrorDetector) IsFatalReturns(result1 bool) {
 	fake.IsFatalStub = nil
 	fake.isFatalReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *FatalErrorDetector) IsFatalReturnsOnCall(i int, result1 bool) {
-	fake.IsFatalStub = nil
-	if fake.isFatalReturnsOnCall == nil {
-		fake.isFatalReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.isFatalReturnsOnCall[i] = struct {
 		result1 bool
 	}{result1}
 }

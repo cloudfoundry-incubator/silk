@@ -16,16 +16,10 @@ type NetNS struct {
 	doReturns struct {
 		result1 error
 	}
-	doReturnsOnCall map[int]struct {
-		result1 error
-	}
 	SetStub        func() error
 	setMutex       sync.RWMutex
 	setArgsForCall []struct{}
 	setReturns     struct {
-		result1 error
-	}
-	setReturnsOnCall map[int]struct {
 		result1 error
 	}
 	PathStub        func() string
@@ -34,16 +28,10 @@ type NetNS struct {
 	pathReturns     struct {
 		result1 string
 	}
-	pathReturnsOnCall map[int]struct {
-		result1 string
-	}
 	FdStub        func() uintptr
 	fdMutex       sync.RWMutex
 	fdArgsForCall []struct{}
 	fdReturns     struct {
-		result1 uintptr
-	}
-	fdReturnsOnCall map[int]struct {
 		result1 uintptr
 	}
 	CloseStub        func() error
@@ -52,16 +40,12 @@ type NetNS struct {
 	closeReturns     struct {
 		result1 error
 	}
-	closeReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *NetNS) Do(toRun func(ns.NetNS) error) error {
 	fake.doMutex.Lock()
-	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		toRun func(ns.NetNS) error
 	}{toRun})
@@ -69,9 +53,6 @@ func (fake *NetNS) Do(toRun func(ns.NetNS) error) error {
 	fake.doMutex.Unlock()
 	if fake.DoStub != nil {
 		return fake.DoStub(toRun)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.doReturns.result1
 }
@@ -95,29 +76,13 @@ func (fake *NetNS) DoReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetNS) DoReturnsOnCall(i int, result1 error) {
-	fake.DoStub = nil
-	if fake.doReturnsOnCall == nil {
-		fake.doReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.doReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetNS) Set() error {
 	fake.setMutex.Lock()
-	ret, specificReturn := fake.setReturnsOnCall[len(fake.setArgsForCall)]
 	fake.setArgsForCall = append(fake.setArgsForCall, struct{}{})
 	fake.recordInvocation("Set", []interface{}{})
 	fake.setMutex.Unlock()
 	if fake.SetStub != nil {
 		return fake.SetStub()
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.setReturns.result1
 }
@@ -135,29 +100,13 @@ func (fake *NetNS) SetReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetNS) SetReturnsOnCall(i int, result1 error) {
-	fake.SetStub = nil
-	if fake.setReturnsOnCall == nil {
-		fake.setReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetNS) Path() string {
 	fake.pathMutex.Lock()
-	ret, specificReturn := fake.pathReturnsOnCall[len(fake.pathArgsForCall)]
 	fake.pathArgsForCall = append(fake.pathArgsForCall, struct{}{})
 	fake.recordInvocation("Path", []interface{}{})
 	fake.pathMutex.Unlock()
 	if fake.PathStub != nil {
 		return fake.PathStub()
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.pathReturns.result1
 }
@@ -175,29 +124,13 @@ func (fake *NetNS) PathReturns(result1 string) {
 	}{result1}
 }
 
-func (fake *NetNS) PathReturnsOnCall(i int, result1 string) {
-	fake.PathStub = nil
-	if fake.pathReturnsOnCall == nil {
-		fake.pathReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.pathReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
 func (fake *NetNS) Fd() uintptr {
 	fake.fdMutex.Lock()
-	ret, specificReturn := fake.fdReturnsOnCall[len(fake.fdArgsForCall)]
 	fake.fdArgsForCall = append(fake.fdArgsForCall, struct{}{})
 	fake.recordInvocation("Fd", []interface{}{})
 	fake.fdMutex.Unlock()
 	if fake.FdStub != nil {
 		return fake.FdStub()
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.fdReturns.result1
 }
@@ -215,29 +148,13 @@ func (fake *NetNS) FdReturns(result1 uintptr) {
 	}{result1}
 }
 
-func (fake *NetNS) FdReturnsOnCall(i int, result1 uintptr) {
-	fake.FdStub = nil
-	if fake.fdReturnsOnCall == nil {
-		fake.fdReturnsOnCall = make(map[int]struct {
-			result1 uintptr
-		})
-	}
-	fake.fdReturnsOnCall[i] = struct {
-		result1 uintptr
-	}{result1}
-}
-
 func (fake *NetNS) Close() error {
 	fake.closeMutex.Lock()
-	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
 	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
 	if fake.CloseStub != nil {
 		return fake.CloseStub()
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.closeReturns.result1
 }
@@ -251,18 +168,6 @@ func (fake *NetNS) CloseCallCount() int {
 func (fake *NetNS) CloseReturns(result1 error) {
 	fake.CloseStub = nil
 	fake.closeReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *NetNS) CloseReturnsOnCall(i int, result1 error) {
-	fake.CloseStub = nil
-	if fake.closeReturnsOnCall == nil {
-		fake.closeReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.closeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

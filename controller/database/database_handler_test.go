@@ -1,6 +1,7 @@
 package database_test
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -29,6 +30,9 @@ var _ = Describe("DatabaseHandler", func() {
 		lease              controller.Lease
 		lease2             controller.Lease
 		dbConf             db.Config
+		timeout            time.Duration
+		mockDeleter        *fakes.SubnetDeleter
+		realDeleter        database.SubnetDeleter
 	)
 	BeforeEach(func() {
 		mockDb = &fakes.Db{}
@@ -37,6 +41,11 @@ var _ = Describe("DatabaseHandler", func() {
 		dbConf = testsupport.GetDBConfig()
 		dbConf.DatabaseName = fmt.Sprintf("test_db_%03d_%x", GinkgoParallelNode(), rand.Int())
 		testsupport.CreateDatabase(dbConf)
+
+		timeout = 2 * time.Second
+
+		mockDeleter = &fakes.SubnetDeleter{}
+		realDeleter = &database.Deleter{}
 
 		var err error
 		realDb, err = db.GetConnectionPool(dbConf)
@@ -66,7 +75,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("Migrate", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 			mockMigrateAdapter.ExecReturns(43, nil)
 		})
 		It("calls the migrate adapter", func() {
@@ -105,7 +114,7 @@ var _ = Describe("DatabaseHandler", func() {
 		})
 		Context("when the migrator fails", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 				mockMigrateAdapter.ExecReturns(0, errors.New("guava"))
 			})
 			It("returns the error", func() {
@@ -117,7 +126,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("AddEntry", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 			mockDb.ExecReturns(nil, nil)
 		})
 
@@ -129,8 +138,10 @@ var _ = Describe("DatabaseHandler", func() {
 				err := databaseHandler.AddEntry(lease)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(mockDb.ExecCallCount()).To(Equal(1))
-				Expect(mockDb.ExecArgsForCall(0)).To(Equal("INSERT INTO subnets (underlay_ip, overlay_subnet, overlay_hwaddr, last_renewed_at) VALUES ('10.244.11.22', '10.255.17.0/24', 'ee:ee:0a:ff:11:00', EXTRACT(EPOCH FROM now())::numeric::integer)"))
+				Expect(mockDb.ExecContextCallCount()).To(Equal(1))
+				_, query, options := mockDb.ExecContextArgsForCall(0)
+				Expect(query).To(Equal("INSERT INTO subnets (underlay_ip, overlay_subnet, overlay_hwaddr, last_renewed_at) VALUES ('10.244.11.22', '10.255.17.0/24', 'ee:ee:0a:ff:11:00', EXTRACT(EPOCH FROM now())::numeric::integer)"))
+				Expect(options).To(BeNil())
 			})
 		})
 
@@ -142,8 +153,10 @@ var _ = Describe("DatabaseHandler", func() {
 				err := databaseHandler.AddEntry(lease)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(mockDb.ExecCallCount()).To(Equal(1))
-				Expect(mockDb.ExecArgsForCall(0)).To(Equal("INSERT INTO subnets (underlay_ip, overlay_subnet, overlay_hwaddr, last_renewed_at) VALUES ('10.244.11.22', '10.255.17.0/24', 'ee:ee:0a:ff:11:00', UNIX_TIMESTAMP())"))
+				Expect(mockDb.ExecContextCallCount()).To(Equal(1))
+				_, query, options := mockDb.ExecContextArgsForCall(0)
+				Expect(query).To(Equal("INSERT INTO subnets (underlay_ip, overlay_subnet, overlay_hwaddr, last_renewed_at) VALUES ('10.244.11.22', '10.255.17.0/24', 'ee:ee:0a:ff:11:00', UNIX_TIMESTAMP())"))
+				Expect(options).To(BeNil())
 			})
 		})
 
@@ -159,7 +172,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the database exec returns an error", func() {
 			BeforeEach(func() {
-				mockDb.ExecReturns(nil, errors.New("apple"))
+				mockDb.ExecContextReturns(nil, errors.New("apple"))
 			})
 			It("returns a sensible error", func() {
 				err := databaseHandler.AddEntry(lease)
@@ -169,8 +182,9 @@ var _ = Describe("DatabaseHandler", func() {
 	})
 
 	Describe("DeleteEntry", func() {
+		var realTx *sqlx.Tx
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, realDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -180,35 +194,9 @@ var _ = Describe("DatabaseHandler", func() {
 			leases, err := databaseHandler.All()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(leases).To(ContainElement(lease))
-		})
 
-		Context("when the database exec returns some other error", func() {
-			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				mockDb.ExecReturns(nil, errors.New("carrot"))
-			})
-			It("returns a sensible error", func() {
-				err := databaseHandler.DeleteEntry("some-underlay")
-				Expect(err).To(MatchError("deleting entry: carrot"))
-
-				Expect(mockDb.ExecCallCount()).To(Equal(1))
-				Expect(mockDb.ExecArgsForCall(0)).To(Equal("DELETE FROM subnets WHERE underlay_ip = 'some-underlay'"))
-			})
-		})
-
-		Context("when the parsing the result fails", func() {
-			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				badResult := &fakes.SqlResult{}
-				badResult.RowsAffectedReturns(0, errors.New("potato"))
-				mockDb.ExecReturns(badResult, nil)
-			})
-
-			It("returns an error", func() {
-				err := databaseHandler.DeleteEntry("10.244.11.22")
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("parse result: potato"))
-			})
+			realTx, err = realDb.BeginTxx(context.Background(), nil)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("deletes an entry from the DB", func() {
@@ -221,6 +209,51 @@ var _ = Describe("DatabaseHandler", func() {
 			Expect(leases).NotTo(ContainElement(lease))
 		})
 
+		Context("when starting the transaction fails", func() {
+			BeforeEach(func() {
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.BeginTxxReturns(nil, errors.New("celery"))
+			})
+			It("returns a sensible error", func() {
+				err := databaseHandler.DeleteEntry("some-underlay")
+				Expect(err).To(MatchError("begin transaction: celery"))
+			})
+		})
+
+		Context("when subnet delete fails", func() {
+			BeforeEach(func() {
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.BeginTxxReturns(realTx, nil)
+				mockDeleter.DeleteReturns(nil, errors.New("banana"))
+			})
+			It("returns a sensible error", func() {
+				err := databaseHandler.DeleteEntry("some-underlay")
+				Expect(err).To(MatchError("deleting entry: banana"))
+
+				Expect(mockDeleter.DeleteCallCount()).To(Equal(1))
+				tx, underlayIP, time := mockDeleter.DeleteArgsForCall(0)
+				Expect(tx).To(Equal(realTx))
+				Expect(underlayIP).To(Equal("some-underlay"))
+				Expect(time).To(Equal(timeout))
+			})
+		})
+
+		Context("when parsing the result fails", func() {
+			BeforeEach(func() {
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.BeginTxxReturns(realTx, nil)
+				badResult := &fakes.SqlResult{}
+				badResult.RowsAffectedReturns(0, errors.New("potato"))
+				mockDeleter.DeleteReturns(badResult, nil)
+			})
+
+			It("returns an error", func() {
+				err := databaseHandler.DeleteEntry("10.244.11.22")
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError("parse result: potato"))
+			})
+		})
+
 		Context("when no entry exists", func() {
 			It("returns a RecordNotAffectedError", func() {
 				err := databaseHandler.DeleteEntry("8.8.8.8")
@@ -230,10 +263,11 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when more than one row in result", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.BeginTxxReturns(realTx, nil)
 				badResult := &fakes.SqlResult{}
 				badResult.RowsAffectedReturns(2, nil)
-				mockDb.ExecReturns(badResult, nil)
+				mockDeleter.DeleteReturns(badResult, nil)
 			})
 
 			It("returns a MultipleRecordsAffectedError", func() {
@@ -245,7 +279,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("LeaseForUnderlayIP", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -268,7 +302,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("RenewLeaseForUnderlayIP", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+			databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 		})
 
 		Context("when the database is postgres", func() {
@@ -279,8 +313,10 @@ var _ = Describe("DatabaseHandler", func() {
 				err := databaseHandler.RenewLeaseForUnderlayIP("1.2.3.4")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(mockDb.ExecCallCount()).To(Equal(1))
-				Expect(mockDb.ExecArgsForCall(0)).To(Equal("UPDATE subnets SET last_renewed_at = EXTRACT(EPOCH FROM now())::numeric::integer WHERE underlay_ip = '1.2.3.4'"))
+				Expect(mockDb.ExecContextCallCount()).To(Equal(1))
+				_, query, options := mockDb.ExecContextArgsForCall(0)
+				Expect(query).To(Equal("UPDATE subnets SET last_renewed_at = EXTRACT(EPOCH FROM now())::numeric::integer WHERE underlay_ip = '1.2.3.4'"))
+				Expect(options).To(BeNil())
 			})
 		})
 
@@ -292,8 +328,10 @@ var _ = Describe("DatabaseHandler", func() {
 				err := databaseHandler.RenewLeaseForUnderlayIP("1.2.3.4")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(mockDb.ExecCallCount()).To(Equal(1))
-				Expect(mockDb.ExecArgsForCall(0)).To(Equal("UPDATE subnets SET last_renewed_at = UNIX_TIMESTAMP() WHERE underlay_ip = '1.2.3.4'"))
+				Expect(mockDb.ExecContextCallCount()).To(Equal(1))
+				_, query, options := mockDb.ExecContextArgsForCall(0)
+				Expect(query).To(Equal("UPDATE subnets SET last_renewed_at = UNIX_TIMESTAMP() WHERE underlay_ip = '1.2.3.4'"))
+				Expect(options).To(BeNil())
 			})
 		})
 
@@ -309,7 +347,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the database exec returns an error", func() {
 			BeforeEach(func() {
-				mockDb.ExecReturns(nil, errors.New("apple"))
+				mockDb.ExecContextReturns(nil, errors.New("apple"))
 			})
 			It("returns a sensible error", func() {
 				err := databaseHandler.RenewLeaseForUnderlayIP("1.2.3.4")
@@ -320,7 +358,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("LastRenewedAtForUnderlayIP", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -352,7 +390,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("All", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -381,8 +419,8 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the query fails", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				mockDb.QueryReturns(nil, errors.New("strawberry"))
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.QueryContextReturns(nil, errors.New("strawberry"))
 			})
 			It("returns an error", func() {
 				_, err := databaseHandler.All()
@@ -397,8 +435,8 @@ var _ = Describe("DatabaseHandler", func() {
 				rows, err = realDb.Query("SELECT 1")
 				Expect(err).NotTo(HaveOccurred())
 
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				mockDb.QueryReturns(rows, nil)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.QueryContextReturns(rows, nil)
 			})
 
 			AfterEach(func() {
@@ -414,7 +452,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("AllActive", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -449,7 +487,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the db driver name is not supported", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 				mockDb.DriverNameReturns("foo")
 			})
 			It("should return an error", func() {
@@ -460,8 +498,8 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the query fails", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				mockDb.QueryReturns(nil, errors.New("strawberry"))
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.QueryContextReturns(nil, errors.New("strawberry"))
 			})
 			It("returns an error", func() {
 				_, err := databaseHandler.AllActive(100)
@@ -476,8 +514,8 @@ var _ = Describe("DatabaseHandler", func() {
 				rows, err = realDb.Query("SELECT 1")
 				Expect(err).NotTo(HaveOccurred())
 
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
-				mockDb.QueryReturns(rows, nil)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
+				mockDb.QueryContextReturns(rows, nil)
 			})
 
 			AfterEach(func() {
@@ -493,7 +531,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 	Describe("OldestExpired", func() {
 		BeforeEach(func() {
-			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+			databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 			_, err := databaseHandler.Migrate()
 			Expect(err).NotTo(HaveOccurred())
 			err = databaseHandler.AddEntry(lease)
@@ -509,7 +547,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when the database type is not supported", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 				mockDb.DriverNameReturns("foo")
 			})
 			It("returns an error", func() {
@@ -520,7 +558,7 @@ var _ = Describe("DatabaseHandler", func() {
 
 		Context("when no lease is expired", func() {
 			BeforeEach(func() {
-				databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb)
+				databaseHandler = database.NewDatabaseHandler(realMigrateAdapter, realDb, mockDeleter, timeout)
 				_, err := databaseHandler.Migrate()
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -536,8 +574,8 @@ var _ = Describe("DatabaseHandler", func() {
 			BeforeEach(func() {
 				result = realDb.QueryRow("SELECT 1")
 
-				mockDb.QueryRowReturns(result)
-				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb)
+				mockDb.QueryRowContextReturns(result)
+				databaseHandler = database.NewDatabaseHandler(mockMigrateAdapter, mockDb, mockDeleter, timeout)
 			})
 			It("returns an error", func() {
 				_, err := databaseHandler.OldestExpired(23)

@@ -18,19 +18,12 @@ type Datastore struct {
 	addReturns struct {
 		result1 error
 	}
-	addReturnsOnCall map[int]struct {
-		result1 error
-	}
 	DeleteStub        func(handle string) (datastore.Container, error)
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		handle string
 	}
 	deleteReturns struct {
-		result1 datastore.Container
-		result2 error
-	}
-	deleteReturnsOnCall map[int]struct {
 		result1 datastore.Container
 		result2 error
 	}
@@ -41,17 +34,12 @@ type Datastore struct {
 		result1 map[string]datastore.Container
 		result2 error
 	}
-	readAllReturnsOnCall map[int]struct {
-		result1 map[string]datastore.Container
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *Datastore) Add(handle string, ip string, metadata map[string]interface{}) error {
 	fake.addMutex.Lock()
-	ret, specificReturn := fake.addReturnsOnCall[len(fake.addArgsForCall)]
 	fake.addArgsForCall = append(fake.addArgsForCall, struct {
 		handle   string
 		ip       string
@@ -61,9 +49,6 @@ func (fake *Datastore) Add(handle string, ip string, metadata map[string]interfa
 	fake.addMutex.Unlock()
 	if fake.AddStub != nil {
 		return fake.AddStub(handle, ip, metadata)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.addReturns.result1
 }
@@ -87,21 +72,8 @@ func (fake *Datastore) AddReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *Datastore) AddReturnsOnCall(i int, result1 error) {
-	fake.AddStub = nil
-	if fake.addReturnsOnCall == nil {
-		fake.addReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.addReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *Datastore) Delete(handle string) (datastore.Container, error) {
 	fake.deleteMutex.Lock()
-	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 		handle string
 	}{handle})
@@ -109,9 +81,6 @@ func (fake *Datastore) Delete(handle string) (datastore.Container, error) {
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
 		return fake.DeleteStub(handle)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.deleteReturns.result1, fake.deleteReturns.result2
 }
@@ -136,31 +105,13 @@ func (fake *Datastore) DeleteReturns(result1 datastore.Container, result2 error)
 	}{result1, result2}
 }
 
-func (fake *Datastore) DeleteReturnsOnCall(i int, result1 datastore.Container, result2 error) {
-	fake.DeleteStub = nil
-	if fake.deleteReturnsOnCall == nil {
-		fake.deleteReturnsOnCall = make(map[int]struct {
-			result1 datastore.Container
-			result2 error
-		})
-	}
-	fake.deleteReturnsOnCall[i] = struct {
-		result1 datastore.Container
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *Datastore) ReadAll() (map[string]datastore.Container, error) {
 	fake.readAllMutex.Lock()
-	ret, specificReturn := fake.readAllReturnsOnCall[len(fake.readAllArgsForCall)]
 	fake.readAllArgsForCall = append(fake.readAllArgsForCall, struct{}{})
 	fake.recordInvocation("ReadAll", []interface{}{})
 	fake.readAllMutex.Unlock()
 	if fake.ReadAllStub != nil {
 		return fake.ReadAllStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.readAllReturns.result1, fake.readAllReturns.result2
 }
@@ -174,20 +125,6 @@ func (fake *Datastore) ReadAllCallCount() int {
 func (fake *Datastore) ReadAllReturns(result1 map[string]datastore.Container, result2 error) {
 	fake.ReadAllStub = nil
 	fake.readAllReturns = struct {
-		result1 map[string]datastore.Container
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *Datastore) ReadAllReturnsOnCall(i int, result1 map[string]datastore.Container, result2 error) {
-	fake.ReadAllStub = nil
-	if fake.readAllReturnsOnCall == nil {
-		fake.readAllReturnsOnCall = make(map[int]struct {
-			result1 map[string]datastore.Container
-			result2 error
-		})
-	}
-	fake.readAllReturnsOnCall[i] = struct {
 		result1 map[string]datastore.Container
 		result2 error
 	}{result1, result2}

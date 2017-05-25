@@ -14,18 +14,12 @@ type CIDRPool struct {
 	getAvailableReturns struct {
 		result1 string
 	}
-	getAvailableReturnsOnCall map[int]struct {
-		result1 string
-	}
 	IsMemberStub        func(string) bool
 	isMemberMutex       sync.RWMutex
 	isMemberArgsForCall []struct {
 		arg1 string
 	}
 	isMemberReturns struct {
-		result1 bool
-	}
-	isMemberReturnsOnCall map[int]struct {
 		result1 bool
 	}
 	invocations      map[string][][]interface{}
@@ -39,7 +33,6 @@ func (fake *CIDRPool) GetAvailable(arg1 []string) string {
 		copy(arg1Copy, arg1)
 	}
 	fake.getAvailableMutex.Lock()
-	ret, specificReturn := fake.getAvailableReturnsOnCall[len(fake.getAvailableArgsForCall)]
 	fake.getAvailableArgsForCall = append(fake.getAvailableArgsForCall, struct {
 		arg1 []string
 	}{arg1Copy})
@@ -47,9 +40,6 @@ func (fake *CIDRPool) GetAvailable(arg1 []string) string {
 	fake.getAvailableMutex.Unlock()
 	if fake.GetAvailableStub != nil {
 		return fake.GetAvailableStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.getAvailableReturns.result1
 }
@@ -73,21 +63,8 @@ func (fake *CIDRPool) GetAvailableReturns(result1 string) {
 	}{result1}
 }
 
-func (fake *CIDRPool) GetAvailableReturnsOnCall(i int, result1 string) {
-	fake.GetAvailableStub = nil
-	if fake.getAvailableReturnsOnCall == nil {
-		fake.getAvailableReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.getAvailableReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
 func (fake *CIDRPool) IsMember(arg1 string) bool {
 	fake.isMemberMutex.Lock()
-	ret, specificReturn := fake.isMemberReturnsOnCall[len(fake.isMemberArgsForCall)]
 	fake.isMemberArgsForCall = append(fake.isMemberArgsForCall, struct {
 		arg1 string
 	}{arg1})
@@ -95,9 +72,6 @@ func (fake *CIDRPool) IsMember(arg1 string) bool {
 	fake.isMemberMutex.Unlock()
 	if fake.IsMemberStub != nil {
 		return fake.IsMemberStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.isMemberReturns.result1
 }
@@ -117,18 +91,6 @@ func (fake *CIDRPool) IsMemberArgsForCall(i int) string {
 func (fake *CIDRPool) IsMemberReturns(result1 bool) {
 	fake.IsMemberStub = nil
 	fake.isMemberReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *CIDRPool) IsMemberReturnsOnCall(i int, result1 bool) {
-	fake.IsMemberStub = nil
-	if fake.isMemberReturnsOnCall == nil {
-		fake.isMemberReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.isMemberReturnsOnCall[i] = struct {
 		result1 bool
 	}{result1}
 }
