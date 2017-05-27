@@ -63,7 +63,10 @@ func mainWithError() error {
 	}
 	logger.Info("db-connection-established")
 
-	databaseHandler := database.NewDatabaseHandler(&database.MigrateAdapter{}, sqlDB)
+	timeout := time.Duration(conf.Database.Timeout) * time.Second
+	timeout = timeout - time.Duration(500)*time.Millisecond
+
+	databaseHandler := database.NewDatabaseHandler(&database.MigrateAdapter{}, sqlDB, timeout)
 	leaseController := &leaser.LeaseController{
 		DatabaseHandler:            databaseHandler,
 		HardwareAddressGenerator:   &leaser.HardwareAddressGenerator{},

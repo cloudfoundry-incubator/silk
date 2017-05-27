@@ -42,6 +42,19 @@ go install ./vendor/github.com/onsi/ginkgo/ginkgo
 
 bootDB $DB
 
+if [ "${1:-""}" = "" ]; then
+  extraArgs=""
+else
+  extraArgs="${@}"
+fi
+
+if [ "${extraArgs}" = "" ]; then
+  ginkgo -r --race -randomizeAllSpecs controller/integration/timeouts
+elif [ "${extraArgs}" = "controller/integration/timeouts/" ]; then
+  ginkgo -r --race -randomizeAllSpecs controller/integration/timeouts
+fi
+
 ginkgo -r -p --race -randomizeAllSpecs -randomizeSuites \
   -ldflags="-extldflags=-Wl,--allow-multiple-definition" \
-  ${@}
+  -skipPackage=timeouts \
+  ${extraArgs}
