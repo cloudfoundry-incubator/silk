@@ -16,17 +16,12 @@ type HardwareAddressGenerator struct {
 		result1 net.HardwareAddr
 		result2 error
 	}
-	generateForVTEPReturnsOnCall map[int]struct {
-		result1 net.HardwareAddr
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *HardwareAddressGenerator) GenerateForVTEP(containerIP net.IP) (net.HardwareAddr, error) {
 	fake.generateForVTEPMutex.Lock()
-	ret, specificReturn := fake.generateForVTEPReturnsOnCall[len(fake.generateForVTEPArgsForCall)]
 	fake.generateForVTEPArgsForCall = append(fake.generateForVTEPArgsForCall, struct {
 		containerIP net.IP
 	}{containerIP})
@@ -34,9 +29,6 @@ func (fake *HardwareAddressGenerator) GenerateForVTEP(containerIP net.IP) (net.H
 	fake.generateForVTEPMutex.Unlock()
 	if fake.GenerateForVTEPStub != nil {
 		return fake.GenerateForVTEPStub(containerIP)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.generateForVTEPReturns.result1, fake.generateForVTEPReturns.result2
 }
@@ -56,20 +48,6 @@ func (fake *HardwareAddressGenerator) GenerateForVTEPArgsForCall(i int) net.IP {
 func (fake *HardwareAddressGenerator) GenerateForVTEPReturns(result1 net.HardwareAddr, result2 error) {
 	fake.GenerateForVTEPStub = nil
 	fake.generateForVTEPReturns = struct {
-		result1 net.HardwareAddr
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *HardwareAddressGenerator) GenerateForVTEPReturnsOnCall(i int, result1 net.HardwareAddr, result2 error) {
-	fake.GenerateForVTEPStub = nil
-	if fake.generateForVTEPReturnsOnCall == nil {
-		fake.generateForVTEPReturnsOnCall = make(map[int]struct {
-			result1 net.HardwareAddr
-			result2 error
-		})
-	}
-	fake.generateForVTEPReturnsOnCall[i] = struct {
 		result1 net.HardwareAddr
 		result2 error
 	}{result1, result2}

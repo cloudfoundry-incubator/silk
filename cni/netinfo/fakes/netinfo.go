@@ -15,25 +15,17 @@ type NetInfo struct {
 		result1 daemon.NetworkInfo
 		result2 error
 	}
-	getReturnsOnCall map[int]struct {
-		result1 daemon.NetworkInfo
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *NetInfo) Get() (daemon.NetworkInfo, error) {
 	fake.getMutex.Lock()
-	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct{}{})
 	fake.recordInvocation("Get", []interface{}{})
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
 		return fake.GetStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.getReturns.result1, fake.getReturns.result2
 }
@@ -47,20 +39,6 @@ func (fake *NetInfo) GetCallCount() int {
 func (fake *NetInfo) GetReturns(result1 daemon.NetworkInfo, result2 error) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
-		result1 daemon.NetworkInfo
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *NetInfo) GetReturnsOnCall(i int, result1 daemon.NetworkInfo, result2 error) {
-	fake.GetStub = nil
-	if fake.getReturnsOnCall == nil {
-		fake.getReturnsOnCall = make(map[int]struct {
-			result1 daemon.NetworkInfo
-			result2 error
-		})
-	}
-	fake.getReturnsOnCall[i] = struct {
 		result1 daemon.NetworkInfo
 		result2 error
 	}{result1, result2}

@@ -18,20 +18,12 @@ type NetlinkAdapter struct {
 		result1 netlink.Link
 		result2 error
 	}
-	linkByNameReturnsOnCall map[int]struct {
-		result1 netlink.Link
-		result2 error
-	}
 	ParseAddrStub        func(string) (*netlink.Addr, error)
 	parseAddrMutex       sync.RWMutex
 	parseAddrArgsForCall []struct {
 		arg1 string
 	}
 	parseAddrReturns struct {
-		result1 *netlink.Addr
-		result2 error
-	}
-	parseAddrReturnsOnCall map[int]struct {
 		result1 *netlink.Addr
 		result2 error
 	}
@@ -44,9 +36,6 @@ type NetlinkAdapter struct {
 	addrAddScopeLinkReturns struct {
 		result1 error
 	}
-	addrAddScopeLinkReturnsOnCall map[int]struct {
-		result1 error
-	}
 	LinkSetHardwareAddrStub        func(netlink.Link, net.HardwareAddr) error
 	linkSetHardwareAddrMutex       sync.RWMutex
 	linkSetHardwareAddrArgsForCall []struct {
@@ -54,9 +43,6 @@ type NetlinkAdapter struct {
 		arg2 net.HardwareAddr
 	}
 	linkSetHardwareAddrReturns struct {
-		result1 error
-	}
-	linkSetHardwareAddrReturnsOnCall map[int]struct {
 		result1 error
 	}
 	NeighAddPermanentIPv4Stub        func(index int, destIP net.IP, hwAddr net.HardwareAddr) error
@@ -69,18 +55,12 @@ type NetlinkAdapter struct {
 	neighAddPermanentIPv4Returns struct {
 		result1 error
 	}
-	neighAddPermanentIPv4ReturnsOnCall map[int]struct {
-		result1 error
-	}
 	LinkSetARPOffStub        func(netlink.Link) error
 	linkSetARPOffMutex       sync.RWMutex
 	linkSetARPOffArgsForCall []struct {
 		arg1 netlink.Link
 	}
 	linkSetARPOffReturns struct {
-		result1 error
-	}
-	linkSetARPOffReturnsOnCall map[int]struct {
 		result1 error
 	}
 	LinkSetNameStub        func(netlink.Link, string) error
@@ -92,18 +72,12 @@ type NetlinkAdapter struct {
 	linkSetNameReturns struct {
 		result1 error
 	}
-	linkSetNameReturnsOnCall map[int]struct {
-		result1 error
-	}
 	LinkSetUpStub        func(netlink.Link) error
 	linkSetUpMutex       sync.RWMutex
 	linkSetUpArgsForCall []struct {
 		arg1 netlink.Link
 	}
 	linkSetUpReturns struct {
-		result1 error
-	}
-	linkSetUpReturnsOnCall map[int]struct {
 		result1 error
 	}
 	LinkDelStub        func(netlink.Link) error
@@ -114,18 +88,12 @@ type NetlinkAdapter struct {
 	linkDelReturns struct {
 		result1 error
 	}
-	linkDelReturnsOnCall map[int]struct {
-		result1 error
-	}
 	LinkAddStub        func(netlink.Link) error
 	linkAddMutex       sync.RWMutex
 	linkAddArgsForCall []struct {
 		arg1 netlink.Link
 	}
 	linkAddReturns struct {
-		result1 error
-	}
-	linkAddReturnsOnCall map[int]struct {
 		result1 error
 	}
 	LinkSetNsFdStub        func(netlink.Link, int) error
@@ -137,9 +105,6 @@ type NetlinkAdapter struct {
 	linkSetNsFdReturns struct {
 		result1 error
 	}
-	linkSetNsFdReturnsOnCall map[int]struct {
-		result1 error
-	}
 	RouteAddStub        func(route *netlink.Route) error
 	routeAddMutex       sync.RWMutex
 	routeAddArgsForCall []struct {
@@ -148,16 +113,12 @@ type NetlinkAdapter struct {
 	routeAddReturns struct {
 		result1 error
 	}
-	routeAddReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *NetlinkAdapter) LinkByName(arg1 string) (netlink.Link, error) {
 	fake.linkByNameMutex.Lock()
-	ret, specificReturn := fake.linkByNameReturnsOnCall[len(fake.linkByNameArgsForCall)]
 	fake.linkByNameArgsForCall = append(fake.linkByNameArgsForCall, struct {
 		arg1 string
 	}{arg1})
@@ -165,9 +126,6 @@ func (fake *NetlinkAdapter) LinkByName(arg1 string) (netlink.Link, error) {
 	fake.linkByNameMutex.Unlock()
 	if fake.LinkByNameStub != nil {
 		return fake.LinkByNameStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.linkByNameReturns.result1, fake.linkByNameReturns.result2
 }
@@ -192,23 +150,8 @@ func (fake *NetlinkAdapter) LinkByNameReturns(result1 netlink.Link, result2 erro
 	}{result1, result2}
 }
 
-func (fake *NetlinkAdapter) LinkByNameReturnsOnCall(i int, result1 netlink.Link, result2 error) {
-	fake.LinkByNameStub = nil
-	if fake.linkByNameReturnsOnCall == nil {
-		fake.linkByNameReturnsOnCall = make(map[int]struct {
-			result1 netlink.Link
-			result2 error
-		})
-	}
-	fake.linkByNameReturnsOnCall[i] = struct {
-		result1 netlink.Link
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *NetlinkAdapter) ParseAddr(arg1 string) (*netlink.Addr, error) {
 	fake.parseAddrMutex.Lock()
-	ret, specificReturn := fake.parseAddrReturnsOnCall[len(fake.parseAddrArgsForCall)]
 	fake.parseAddrArgsForCall = append(fake.parseAddrArgsForCall, struct {
 		arg1 string
 	}{arg1})
@@ -216,9 +159,6 @@ func (fake *NetlinkAdapter) ParseAddr(arg1 string) (*netlink.Addr, error) {
 	fake.parseAddrMutex.Unlock()
 	if fake.ParseAddrStub != nil {
 		return fake.ParseAddrStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.parseAddrReturns.result1, fake.parseAddrReturns.result2
 }
@@ -243,23 +183,8 @@ func (fake *NetlinkAdapter) ParseAddrReturns(result1 *netlink.Addr, result2 erro
 	}{result1, result2}
 }
 
-func (fake *NetlinkAdapter) ParseAddrReturnsOnCall(i int, result1 *netlink.Addr, result2 error) {
-	fake.ParseAddrStub = nil
-	if fake.parseAddrReturnsOnCall == nil {
-		fake.parseAddrReturnsOnCall = make(map[int]struct {
-			result1 *netlink.Addr
-			result2 error
-		})
-	}
-	fake.parseAddrReturnsOnCall[i] = struct {
-		result1 *netlink.Addr
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *NetlinkAdapter) AddrAddScopeLink(arg1 netlink.Link, arg2 *netlink.Addr) error {
 	fake.addrAddScopeLinkMutex.Lock()
-	ret, specificReturn := fake.addrAddScopeLinkReturnsOnCall[len(fake.addrAddScopeLinkArgsForCall)]
 	fake.addrAddScopeLinkArgsForCall = append(fake.addrAddScopeLinkArgsForCall, struct {
 		arg1 netlink.Link
 		arg2 *netlink.Addr
@@ -268,9 +193,6 @@ func (fake *NetlinkAdapter) AddrAddScopeLink(arg1 netlink.Link, arg2 *netlink.Ad
 	fake.addrAddScopeLinkMutex.Unlock()
 	if fake.AddrAddScopeLinkStub != nil {
 		return fake.AddrAddScopeLinkStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.addrAddScopeLinkReturns.result1
 }
@@ -294,21 +216,8 @@ func (fake *NetlinkAdapter) AddrAddScopeLinkReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) AddrAddScopeLinkReturnsOnCall(i int, result1 error) {
-	fake.AddrAddScopeLinkStub = nil
-	if fake.addrAddScopeLinkReturnsOnCall == nil {
-		fake.addrAddScopeLinkReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.addrAddScopeLinkReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkSetHardwareAddr(arg1 netlink.Link, arg2 net.HardwareAddr) error {
 	fake.linkSetHardwareAddrMutex.Lock()
-	ret, specificReturn := fake.linkSetHardwareAddrReturnsOnCall[len(fake.linkSetHardwareAddrArgsForCall)]
 	fake.linkSetHardwareAddrArgsForCall = append(fake.linkSetHardwareAddrArgsForCall, struct {
 		arg1 netlink.Link
 		arg2 net.HardwareAddr
@@ -317,9 +226,6 @@ func (fake *NetlinkAdapter) LinkSetHardwareAddr(arg1 netlink.Link, arg2 net.Hard
 	fake.linkSetHardwareAddrMutex.Unlock()
 	if fake.LinkSetHardwareAddrStub != nil {
 		return fake.LinkSetHardwareAddrStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkSetHardwareAddrReturns.result1
 }
@@ -343,21 +249,8 @@ func (fake *NetlinkAdapter) LinkSetHardwareAddrReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkSetHardwareAddrReturnsOnCall(i int, result1 error) {
-	fake.LinkSetHardwareAddrStub = nil
-	if fake.linkSetHardwareAddrReturnsOnCall == nil {
-		fake.linkSetHardwareAddrReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkSetHardwareAddrReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) NeighAddPermanentIPv4(index int, destIP net.IP, hwAddr net.HardwareAddr) error {
 	fake.neighAddPermanentIPv4Mutex.Lock()
-	ret, specificReturn := fake.neighAddPermanentIPv4ReturnsOnCall[len(fake.neighAddPermanentIPv4ArgsForCall)]
 	fake.neighAddPermanentIPv4ArgsForCall = append(fake.neighAddPermanentIPv4ArgsForCall, struct {
 		index  int
 		destIP net.IP
@@ -367,9 +260,6 @@ func (fake *NetlinkAdapter) NeighAddPermanentIPv4(index int, destIP net.IP, hwAd
 	fake.neighAddPermanentIPv4Mutex.Unlock()
 	if fake.NeighAddPermanentIPv4Stub != nil {
 		return fake.NeighAddPermanentIPv4Stub(index, destIP, hwAddr)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.neighAddPermanentIPv4Returns.result1
 }
@@ -393,21 +283,8 @@ func (fake *NetlinkAdapter) NeighAddPermanentIPv4Returns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) NeighAddPermanentIPv4ReturnsOnCall(i int, result1 error) {
-	fake.NeighAddPermanentIPv4Stub = nil
-	if fake.neighAddPermanentIPv4ReturnsOnCall == nil {
-		fake.neighAddPermanentIPv4ReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.neighAddPermanentIPv4ReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkSetARPOff(arg1 netlink.Link) error {
 	fake.linkSetARPOffMutex.Lock()
-	ret, specificReturn := fake.linkSetARPOffReturnsOnCall[len(fake.linkSetARPOffArgsForCall)]
 	fake.linkSetARPOffArgsForCall = append(fake.linkSetARPOffArgsForCall, struct {
 		arg1 netlink.Link
 	}{arg1})
@@ -415,9 +292,6 @@ func (fake *NetlinkAdapter) LinkSetARPOff(arg1 netlink.Link) error {
 	fake.linkSetARPOffMutex.Unlock()
 	if fake.LinkSetARPOffStub != nil {
 		return fake.LinkSetARPOffStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkSetARPOffReturns.result1
 }
@@ -441,21 +315,8 @@ func (fake *NetlinkAdapter) LinkSetARPOffReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkSetARPOffReturnsOnCall(i int, result1 error) {
-	fake.LinkSetARPOffStub = nil
-	if fake.linkSetARPOffReturnsOnCall == nil {
-		fake.linkSetARPOffReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkSetARPOffReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkSetName(arg1 netlink.Link, arg2 string) error {
 	fake.linkSetNameMutex.Lock()
-	ret, specificReturn := fake.linkSetNameReturnsOnCall[len(fake.linkSetNameArgsForCall)]
 	fake.linkSetNameArgsForCall = append(fake.linkSetNameArgsForCall, struct {
 		arg1 netlink.Link
 		arg2 string
@@ -464,9 +325,6 @@ func (fake *NetlinkAdapter) LinkSetName(arg1 netlink.Link, arg2 string) error {
 	fake.linkSetNameMutex.Unlock()
 	if fake.LinkSetNameStub != nil {
 		return fake.LinkSetNameStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkSetNameReturns.result1
 }
@@ -490,21 +348,8 @@ func (fake *NetlinkAdapter) LinkSetNameReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkSetNameReturnsOnCall(i int, result1 error) {
-	fake.LinkSetNameStub = nil
-	if fake.linkSetNameReturnsOnCall == nil {
-		fake.linkSetNameReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkSetNameReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkSetUp(arg1 netlink.Link) error {
 	fake.linkSetUpMutex.Lock()
-	ret, specificReturn := fake.linkSetUpReturnsOnCall[len(fake.linkSetUpArgsForCall)]
 	fake.linkSetUpArgsForCall = append(fake.linkSetUpArgsForCall, struct {
 		arg1 netlink.Link
 	}{arg1})
@@ -512,9 +357,6 @@ func (fake *NetlinkAdapter) LinkSetUp(arg1 netlink.Link) error {
 	fake.linkSetUpMutex.Unlock()
 	if fake.LinkSetUpStub != nil {
 		return fake.LinkSetUpStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkSetUpReturns.result1
 }
@@ -538,21 +380,8 @@ func (fake *NetlinkAdapter) LinkSetUpReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkSetUpReturnsOnCall(i int, result1 error) {
-	fake.LinkSetUpStub = nil
-	if fake.linkSetUpReturnsOnCall == nil {
-		fake.linkSetUpReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkSetUpReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkDel(arg1 netlink.Link) error {
 	fake.linkDelMutex.Lock()
-	ret, specificReturn := fake.linkDelReturnsOnCall[len(fake.linkDelArgsForCall)]
 	fake.linkDelArgsForCall = append(fake.linkDelArgsForCall, struct {
 		arg1 netlink.Link
 	}{arg1})
@@ -560,9 +389,6 @@ func (fake *NetlinkAdapter) LinkDel(arg1 netlink.Link) error {
 	fake.linkDelMutex.Unlock()
 	if fake.LinkDelStub != nil {
 		return fake.LinkDelStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkDelReturns.result1
 }
@@ -586,21 +412,8 @@ func (fake *NetlinkAdapter) LinkDelReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkDelReturnsOnCall(i int, result1 error) {
-	fake.LinkDelStub = nil
-	if fake.linkDelReturnsOnCall == nil {
-		fake.linkDelReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkDelReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkAdd(arg1 netlink.Link) error {
 	fake.linkAddMutex.Lock()
-	ret, specificReturn := fake.linkAddReturnsOnCall[len(fake.linkAddArgsForCall)]
 	fake.linkAddArgsForCall = append(fake.linkAddArgsForCall, struct {
 		arg1 netlink.Link
 	}{arg1})
@@ -608,9 +421,6 @@ func (fake *NetlinkAdapter) LinkAdd(arg1 netlink.Link) error {
 	fake.linkAddMutex.Unlock()
 	if fake.LinkAddStub != nil {
 		return fake.LinkAddStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkAddReturns.result1
 }
@@ -634,21 +444,8 @@ func (fake *NetlinkAdapter) LinkAddReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkAddReturnsOnCall(i int, result1 error) {
-	fake.LinkAddStub = nil
-	if fake.linkAddReturnsOnCall == nil {
-		fake.linkAddReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkAddReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) LinkSetNsFd(arg1 netlink.Link, arg2 int) error {
 	fake.linkSetNsFdMutex.Lock()
-	ret, specificReturn := fake.linkSetNsFdReturnsOnCall[len(fake.linkSetNsFdArgsForCall)]
 	fake.linkSetNsFdArgsForCall = append(fake.linkSetNsFdArgsForCall, struct {
 		arg1 netlink.Link
 		arg2 int
@@ -657,9 +454,6 @@ func (fake *NetlinkAdapter) LinkSetNsFd(arg1 netlink.Link, arg2 int) error {
 	fake.linkSetNsFdMutex.Unlock()
 	if fake.LinkSetNsFdStub != nil {
 		return fake.LinkSetNsFdStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.linkSetNsFdReturns.result1
 }
@@ -683,21 +477,8 @@ func (fake *NetlinkAdapter) LinkSetNsFdReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *NetlinkAdapter) LinkSetNsFdReturnsOnCall(i int, result1 error) {
-	fake.LinkSetNsFdStub = nil
-	if fake.linkSetNsFdReturnsOnCall == nil {
-		fake.linkSetNsFdReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.linkSetNsFdReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *NetlinkAdapter) RouteAdd(route *netlink.Route) error {
 	fake.routeAddMutex.Lock()
-	ret, specificReturn := fake.routeAddReturnsOnCall[len(fake.routeAddArgsForCall)]
 	fake.routeAddArgsForCall = append(fake.routeAddArgsForCall, struct {
 		route *netlink.Route
 	}{route})
@@ -705,9 +486,6 @@ func (fake *NetlinkAdapter) RouteAdd(route *netlink.Route) error {
 	fake.routeAddMutex.Unlock()
 	if fake.RouteAddStub != nil {
 		return fake.RouteAddStub(route)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.routeAddReturns.result1
 }
@@ -727,18 +505,6 @@ func (fake *NetlinkAdapter) RouteAddArgsForCall(i int) *netlink.Route {
 func (fake *NetlinkAdapter) RouteAddReturns(result1 error) {
 	fake.RouteAddStub = nil
 	fake.routeAddReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *NetlinkAdapter) RouteAddReturnsOnCall(i int, result1 error) {
-	fake.RouteAddStub = nil
-	if fake.routeAddReturnsOnCall == nil {
-		fake.routeAddReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.routeAddReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

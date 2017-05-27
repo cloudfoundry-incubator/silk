@@ -16,16 +16,12 @@ type LeaseValidator struct {
 	validateReturns struct {
 		result1 error
 	}
-	validateReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *LeaseValidator) Validate(arg1 controller.Lease) error {
 	fake.validateMutex.Lock()
-	ret, specificReturn := fake.validateReturnsOnCall[len(fake.validateArgsForCall)]
 	fake.validateArgsForCall = append(fake.validateArgsForCall, struct {
 		arg1 controller.Lease
 	}{arg1})
@@ -33,9 +29,6 @@ func (fake *LeaseValidator) Validate(arg1 controller.Lease) error {
 	fake.validateMutex.Unlock()
 	if fake.ValidateStub != nil {
 		return fake.ValidateStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.validateReturns.result1
 }
@@ -55,18 +48,6 @@ func (fake *LeaseValidator) ValidateArgsForCall(i int) controller.Lease {
 func (fake *LeaseValidator) ValidateReturns(result1 error) {
 	fake.ValidateStub = nil
 	fake.validateReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *LeaseValidator) ValidateReturnsOnCall(i int, result1 error) {
-	fake.ValidateStub = nil
-	if fake.validateReturnsOnCall == nil {
-		fake.validateReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.validateReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

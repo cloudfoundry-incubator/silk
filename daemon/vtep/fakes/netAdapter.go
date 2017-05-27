@@ -14,10 +14,6 @@ type NetAdapter struct {
 		result1 []net.Interface
 		result2 error
 	}
-	interfacesReturnsOnCall map[int]struct {
-		result1 []net.Interface
-		result2 error
-	}
 	InterfaceAddrsStub        func(net.Interface) ([]net.Addr, error)
 	interfaceAddrsMutex       sync.RWMutex
 	interfaceAddrsArgsForCall []struct {
@@ -27,25 +23,17 @@ type NetAdapter struct {
 		result1 []net.Addr
 		result2 error
 	}
-	interfaceAddrsReturnsOnCall map[int]struct {
-		result1 []net.Addr
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *NetAdapter) Interfaces() ([]net.Interface, error) {
 	fake.interfacesMutex.Lock()
-	ret, specificReturn := fake.interfacesReturnsOnCall[len(fake.interfacesArgsForCall)]
 	fake.interfacesArgsForCall = append(fake.interfacesArgsForCall, struct{}{})
 	fake.recordInvocation("Interfaces", []interface{}{})
 	fake.interfacesMutex.Unlock()
 	if fake.InterfacesStub != nil {
 		return fake.InterfacesStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.interfacesReturns.result1, fake.interfacesReturns.result2
 }
@@ -64,23 +52,8 @@ func (fake *NetAdapter) InterfacesReturns(result1 []net.Interface, result2 error
 	}{result1, result2}
 }
 
-func (fake *NetAdapter) InterfacesReturnsOnCall(i int, result1 []net.Interface, result2 error) {
-	fake.InterfacesStub = nil
-	if fake.interfacesReturnsOnCall == nil {
-		fake.interfacesReturnsOnCall = make(map[int]struct {
-			result1 []net.Interface
-			result2 error
-		})
-	}
-	fake.interfacesReturnsOnCall[i] = struct {
-		result1 []net.Interface
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *NetAdapter) InterfaceAddrs(arg1 net.Interface) ([]net.Addr, error) {
 	fake.interfaceAddrsMutex.Lock()
-	ret, specificReturn := fake.interfaceAddrsReturnsOnCall[len(fake.interfaceAddrsArgsForCall)]
 	fake.interfaceAddrsArgsForCall = append(fake.interfaceAddrsArgsForCall, struct {
 		arg1 net.Interface
 	}{arg1})
@@ -88,9 +61,6 @@ func (fake *NetAdapter) InterfaceAddrs(arg1 net.Interface) ([]net.Addr, error) {
 	fake.interfaceAddrsMutex.Unlock()
 	if fake.InterfaceAddrsStub != nil {
 		return fake.InterfaceAddrsStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.interfaceAddrsReturns.result1, fake.interfaceAddrsReturns.result2
 }
@@ -110,20 +80,6 @@ func (fake *NetAdapter) InterfaceAddrsArgsForCall(i int) net.Interface {
 func (fake *NetAdapter) InterfaceAddrsReturns(result1 []net.Addr, result2 error) {
 	fake.InterfaceAddrsStub = nil
 	fake.interfaceAddrsReturns = struct {
-		result1 []net.Addr
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *NetAdapter) InterfaceAddrsReturnsOnCall(i int, result1 []net.Addr, result2 error) {
-	fake.InterfaceAddrsStub = nil
-	if fake.interfaceAddrsReturnsOnCall == nil {
-		fake.interfaceAddrsReturnsOnCall = make(map[int]struct {
-			result1 []net.Addr
-			result2 error
-		})
-	}
-	fake.interfaceAddrsReturnsOnCall[i] = struct {
 		result1 []net.Addr
 		result2 error
 	}{result1, result2}

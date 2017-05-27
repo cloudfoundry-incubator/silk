@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/silk/controller"
 
+	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -20,6 +21,7 @@ var MultipleRecordsAffectedError = errors.New("multiple records affected")
 
 //go:generate counterfeiter -o fakes/db.go --fake-name Db . Db
 type Db interface {
+	BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
@@ -27,6 +29,14 @@ type Db interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	DriverName() string
+}
+
+//go:generate counterfeiter -o fakes/transaction.go --fake-name Transaction . Transaction
+type Transaction interface {
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Commit() error
+	Rollback() error
+	Rebind(string) string
 }
 
 //go:generate counterfeiter -o fakes/migrateAdapter.go --fake-name MigrateAdapter . migrateAdapter
@@ -38,10 +48,11 @@ type DatabaseHandler struct {
 	migrator   migrateAdapter
 	migrations *migrate.MemoryMigrationSource
 	db         Db
+	deleter    SubnetDeleter
 	timeout    time.Duration
 }
 
-func NewDatabaseHandler(migrator migrateAdapter, db Db, timeout time.Duration) *DatabaseHandler {
+func NewDatabaseHandler(migrator migrateAdapter, db Db, sd SubnetDeleter, timeout time.Duration) *DatabaseHandler {
 	return &DatabaseHandler{
 		migrator: migrator,
 		migrations: &migrate.MemoryMigrationSource{
@@ -54,6 +65,7 @@ func NewDatabaseHandler(migrator migrateAdapter, db Db, timeout time.Duration) *
 			},
 		},
 		db:      db,
+		deleter: sd,
 		timeout: timeout,
 	}
 }
@@ -155,23 +167,48 @@ func (d *DatabaseHandler) AddEntry(lease controller.Lease) error {
 	return nil
 }
 
+func commit(tx Transaction) error {
+	err := tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction: %s", err) // TODO untested
+	}
+	return nil
+}
+
+func rollback(tx Transaction, err error) error {
+	txErr := tx.Rollback()
+	if txErr != nil {
+		return fmt.Errorf("db rollback: %s (sql error: %s)", txErr, err)
+	}
+	return err
+}
+
 func (d *DatabaseHandler) DeleteEntry(underlayIP string) error {
 	ctx, _ := context.WithTimeout(context.Background(), d.timeout)
-	result, err := d.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM subnets WHERE underlay_ip = '%s'", underlayIP))
+
+	// For reasons we don't understand, postgres db.ExecContext does
+	// not time out on network partition. But exec w/ transaction
+	// correctly times out. So we want to use a transaction here.
+	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("deleting entry: %s", err)
+		return fmt.Errorf("begin transaction: %s", err)
+	}
+
+	result, err := d.deleter.Delete(tx, underlayIP, d.timeout)
+	if err != nil {
+		return rollback(tx, fmt.Errorf("deleting entry: %s", err))
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("parse result: %s", err)
+		return rollback(tx, fmt.Errorf("parse result: %s", err))
 	}
 	if nRows == 0 {
-		return RecordNotAffectedError
+		return rollback(tx, RecordNotAffectedError)
 	}
 	if nRows > 1 {
-		return MultipleRecordsAffectedError
+		return rollback(tx, MultipleRecordsAffectedError)
 	}
-	return nil
+	return commit(tx)
 }
 
 func (d *DatabaseHandler) LeaseForUnderlayIP(underlayIP string) (*controller.Lease, error) {

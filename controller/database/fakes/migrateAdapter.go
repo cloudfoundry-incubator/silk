@@ -21,17 +21,12 @@ type MigrateAdapter struct {
 		result1 int
 		result2 error
 	}
-	execReturnsOnCall map[int]struct {
-		result1 int
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *MigrateAdapter) Exec(db database.Db, dialect string, m migrate.MigrationSource, dir migrate.MigrationDirection) (int, error) {
 	fake.execMutex.Lock()
-	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
 		db      database.Db
 		dialect string
@@ -42,9 +37,6 @@ func (fake *MigrateAdapter) Exec(db database.Db, dialect string, m migrate.Migra
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
 		return fake.ExecStub(db, dialect, m, dir)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.execReturns.result1, fake.execReturns.result2
 }
@@ -64,20 +56,6 @@ func (fake *MigrateAdapter) ExecArgsForCall(i int) (database.Db, string, migrate
 func (fake *MigrateAdapter) ExecReturns(result1 int, result2 error) {
 	fake.ExecStub = nil
 	fake.execReturns = struct {
-		result1 int
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *MigrateAdapter) ExecReturnsOnCall(i int, result1 int, result2 error) {
-	fake.ExecStub = nil
-	if fake.execReturnsOnCall == nil {
-		fake.execReturnsOnCall = make(map[int]struct {
-			result1 int
-			result2 error
-		})
-	}
-	fake.execReturnsOnCall[i] = struct {
 		result1 int
 		result2 error
 	}{result1, result2}

@@ -2,13 +2,25 @@
 package fakes
 
 import (
+	"context"
 	"database/sql"
 	"sync"
 
 	"code.cloudfoundry.org/silk/controller/database"
+	"github.com/jmoiron/sqlx"
 )
 
 type Db struct {
+	BeginTxxStub        func(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error)
+	beginTxxMutex       sync.RWMutex
+	beginTxxArgsForCall []struct {
+		ctx  context.Context
+		opts *sql.TxOptions
+	}
+	beginTxxReturns struct {
+		result1 *sqlx.Tx
+		result2 error
+	}
 	ExecStub        func(query string, args ...interface{}) (sql.Result, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
@@ -19,7 +31,14 @@ type Db struct {
 		result1 sql.Result
 		result2 error
 	}
-	execReturnsOnCall map[int]struct {
+	ExecContextStub        func(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	execContextMutex       sync.RWMutex
+	execContextArgsForCall []struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}
+	execContextReturns struct {
 		result1 sql.Result
 		result2 error
 	}
@@ -33,7 +52,14 @@ type Db struct {
 		result1 *sql.Rows
 		result2 error
 	}
-	queryReturnsOnCall map[int]struct {
+	QueryContextStub        func(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	queryContextMutex       sync.RWMutex
+	queryContextArgsForCall []struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}
+	queryContextReturns struct {
 		result1 *sql.Rows
 		result2 error
 	}
@@ -46,7 +72,14 @@ type Db struct {
 	queryRowReturns struct {
 		result1 *sql.Row
 	}
-	queryRowReturnsOnCall map[int]struct {
+	QueryRowContextStub        func(ctx context.Context, query string, args ...interface{}) *sql.Row
+	queryRowContextMutex       sync.RWMutex
+	queryRowContextArgsForCall []struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}
+	queryRowContextReturns struct {
 		result1 *sql.Row
 	}
 	DriverNameStub        func() string
@@ -55,16 +88,46 @@ type Db struct {
 	driverNameReturns     struct {
 		result1 string
 	}
-	driverNameReturnsOnCall map[int]struct {
-		result1 string
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
+func (fake *Db) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
+	fake.beginTxxMutex.Lock()
+	fake.beginTxxArgsForCall = append(fake.beginTxxArgsForCall, struct {
+		ctx  context.Context
+		opts *sql.TxOptions
+	}{ctx, opts})
+	fake.recordInvocation("BeginTxx", []interface{}{ctx, opts})
+	fake.beginTxxMutex.Unlock()
+	if fake.BeginTxxStub != nil {
+		return fake.BeginTxxStub(ctx, opts)
+	}
+	return fake.beginTxxReturns.result1, fake.beginTxxReturns.result2
+}
+
+func (fake *Db) BeginTxxCallCount() int {
+	fake.beginTxxMutex.RLock()
+	defer fake.beginTxxMutex.RUnlock()
+	return len(fake.beginTxxArgsForCall)
+}
+
+func (fake *Db) BeginTxxArgsForCall(i int) (context.Context, *sql.TxOptions) {
+	fake.beginTxxMutex.RLock()
+	defer fake.beginTxxMutex.RUnlock()
+	return fake.beginTxxArgsForCall[i].ctx, fake.beginTxxArgsForCall[i].opts
+}
+
+func (fake *Db) BeginTxxReturns(result1 *sqlx.Tx, result2 error) {
+	fake.BeginTxxStub = nil
+	fake.beginTxxReturns = struct {
+		result1 *sqlx.Tx
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *Db) Exec(query string, args ...interface{}) (sql.Result, error) {
 	fake.execMutex.Lock()
-	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
 		query string
 		args  []interface{}
@@ -73,9 +136,6 @@ func (fake *Db) Exec(query string, args ...interface{}) (sql.Result, error) {
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
 		return fake.ExecStub(query, args...)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.execReturns.result1, fake.execReturns.result2
 }
@@ -100,15 +160,36 @@ func (fake *Db) ExecReturns(result1 sql.Result, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *Db) ExecReturnsOnCall(i int, result1 sql.Result, result2 error) {
-	fake.ExecStub = nil
-	if fake.execReturnsOnCall == nil {
-		fake.execReturnsOnCall = make(map[int]struct {
-			result1 sql.Result
-			result2 error
-		})
+func (fake *Db) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	fake.execContextMutex.Lock()
+	fake.execContextArgsForCall = append(fake.execContextArgsForCall, struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}{ctx, query, args})
+	fake.recordInvocation("ExecContext", []interface{}{ctx, query, args})
+	fake.execContextMutex.Unlock()
+	if fake.ExecContextStub != nil {
+		return fake.ExecContextStub(ctx, query, args...)
 	}
-	fake.execReturnsOnCall[i] = struct {
+	return fake.execContextReturns.result1, fake.execContextReturns.result2
+}
+
+func (fake *Db) ExecContextCallCount() int {
+	fake.execContextMutex.RLock()
+	defer fake.execContextMutex.RUnlock()
+	return len(fake.execContextArgsForCall)
+}
+
+func (fake *Db) ExecContextArgsForCall(i int) (context.Context, string, []interface{}) {
+	fake.execContextMutex.RLock()
+	defer fake.execContextMutex.RUnlock()
+	return fake.execContextArgsForCall[i].ctx, fake.execContextArgsForCall[i].query, fake.execContextArgsForCall[i].args
+}
+
+func (fake *Db) ExecContextReturns(result1 sql.Result, result2 error) {
+	fake.ExecContextStub = nil
+	fake.execContextReturns = struct {
 		result1 sql.Result
 		result2 error
 	}{result1, result2}
@@ -116,7 +197,6 @@ func (fake *Db) ExecReturnsOnCall(i int, result1 sql.Result, result2 error) {
 
 func (fake *Db) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	fake.queryMutex.Lock()
-	ret, specificReturn := fake.queryReturnsOnCall[len(fake.queryArgsForCall)]
 	fake.queryArgsForCall = append(fake.queryArgsForCall, struct {
 		query string
 		args  []interface{}
@@ -125,9 +205,6 @@ func (fake *Db) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	fake.queryMutex.Unlock()
 	if fake.QueryStub != nil {
 		return fake.QueryStub(query, args...)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
 	}
 	return fake.queryReturns.result1, fake.queryReturns.result2
 }
@@ -152,15 +229,36 @@ func (fake *Db) QueryReturns(result1 *sql.Rows, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *Db) QueryReturnsOnCall(i int, result1 *sql.Rows, result2 error) {
-	fake.QueryStub = nil
-	if fake.queryReturnsOnCall == nil {
-		fake.queryReturnsOnCall = make(map[int]struct {
-			result1 *sql.Rows
-			result2 error
-		})
+func (fake *Db) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	fake.queryContextMutex.Lock()
+	fake.queryContextArgsForCall = append(fake.queryContextArgsForCall, struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}{ctx, query, args})
+	fake.recordInvocation("QueryContext", []interface{}{ctx, query, args})
+	fake.queryContextMutex.Unlock()
+	if fake.QueryContextStub != nil {
+		return fake.QueryContextStub(ctx, query, args...)
 	}
-	fake.queryReturnsOnCall[i] = struct {
+	return fake.queryContextReturns.result1, fake.queryContextReturns.result2
+}
+
+func (fake *Db) QueryContextCallCount() int {
+	fake.queryContextMutex.RLock()
+	defer fake.queryContextMutex.RUnlock()
+	return len(fake.queryContextArgsForCall)
+}
+
+func (fake *Db) QueryContextArgsForCall(i int) (context.Context, string, []interface{}) {
+	fake.queryContextMutex.RLock()
+	defer fake.queryContextMutex.RUnlock()
+	return fake.queryContextArgsForCall[i].ctx, fake.queryContextArgsForCall[i].query, fake.queryContextArgsForCall[i].args
+}
+
+func (fake *Db) QueryContextReturns(result1 *sql.Rows, result2 error) {
+	fake.QueryContextStub = nil
+	fake.queryContextReturns = struct {
 		result1 *sql.Rows
 		result2 error
 	}{result1, result2}
@@ -168,7 +266,6 @@ func (fake *Db) QueryReturnsOnCall(i int, result1 *sql.Rows, result2 error) {
 
 func (fake *Db) QueryRow(query string, args ...interface{}) *sql.Row {
 	fake.queryRowMutex.Lock()
-	ret, specificReturn := fake.queryRowReturnsOnCall[len(fake.queryRowArgsForCall)]
 	fake.queryRowArgsForCall = append(fake.queryRowArgsForCall, struct {
 		query string
 		args  []interface{}
@@ -177,9 +274,6 @@ func (fake *Db) QueryRow(query string, args ...interface{}) *sql.Row {
 	fake.queryRowMutex.Unlock()
 	if fake.QueryRowStub != nil {
 		return fake.QueryRowStub(query, args...)
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.queryRowReturns.result1
 }
@@ -203,29 +297,47 @@ func (fake *Db) QueryRowReturns(result1 *sql.Row) {
 	}{result1}
 }
 
-func (fake *Db) QueryRowReturnsOnCall(i int, result1 *sql.Row) {
-	fake.QueryRowStub = nil
-	if fake.queryRowReturnsOnCall == nil {
-		fake.queryRowReturnsOnCall = make(map[int]struct {
-			result1 *sql.Row
-		})
+func (fake *Db) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	fake.queryRowContextMutex.Lock()
+	fake.queryRowContextArgsForCall = append(fake.queryRowContextArgsForCall, struct {
+		ctx   context.Context
+		query string
+		args  []interface{}
+	}{ctx, query, args})
+	fake.recordInvocation("QueryRowContext", []interface{}{ctx, query, args})
+	fake.queryRowContextMutex.Unlock()
+	if fake.QueryRowContextStub != nil {
+		return fake.QueryRowContextStub(ctx, query, args...)
 	}
-	fake.queryRowReturnsOnCall[i] = struct {
+	return fake.queryRowContextReturns.result1
+}
+
+func (fake *Db) QueryRowContextCallCount() int {
+	fake.queryRowContextMutex.RLock()
+	defer fake.queryRowContextMutex.RUnlock()
+	return len(fake.queryRowContextArgsForCall)
+}
+
+func (fake *Db) QueryRowContextArgsForCall(i int) (context.Context, string, []interface{}) {
+	fake.queryRowContextMutex.RLock()
+	defer fake.queryRowContextMutex.RUnlock()
+	return fake.queryRowContextArgsForCall[i].ctx, fake.queryRowContextArgsForCall[i].query, fake.queryRowContextArgsForCall[i].args
+}
+
+func (fake *Db) QueryRowContextReturns(result1 *sql.Row) {
+	fake.QueryRowContextStub = nil
+	fake.queryRowContextReturns = struct {
 		result1 *sql.Row
 	}{result1}
 }
 
 func (fake *Db) DriverName() string {
 	fake.driverNameMutex.Lock()
-	ret, specificReturn := fake.driverNameReturnsOnCall[len(fake.driverNameArgsForCall)]
 	fake.driverNameArgsForCall = append(fake.driverNameArgsForCall, struct{}{})
 	fake.recordInvocation("DriverName", []interface{}{})
 	fake.driverNameMutex.Unlock()
 	if fake.DriverNameStub != nil {
 		return fake.DriverNameStub()
-	}
-	if specificReturn {
-		return ret.result1
 	}
 	return fake.driverNameReturns.result1
 }
@@ -243,27 +355,23 @@ func (fake *Db) DriverNameReturns(result1 string) {
 	}{result1}
 }
 
-func (fake *Db) DriverNameReturnsOnCall(i int, result1 string) {
-	fake.DriverNameStub = nil
-	if fake.driverNameReturnsOnCall == nil {
-		fake.driverNameReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.driverNameReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
 func (fake *Db) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.beginTxxMutex.RLock()
+	defer fake.beginTxxMutex.RUnlock()
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
+	fake.execContextMutex.RLock()
+	defer fake.execContextMutex.RUnlock()
 	fake.queryMutex.RLock()
 	defer fake.queryMutex.RUnlock()
+	fake.queryContextMutex.RLock()
+	defer fake.queryContextMutex.RUnlock()
 	fake.queryRowMutex.RLock()
 	defer fake.queryRowMutex.RUnlock()
+	fake.queryRowContextMutex.RLock()
+	defer fake.queryRowContextMutex.RUnlock()
 	fake.driverNameMutex.RLock()
 	defer fake.driverNameMutex.RUnlock()
 	return fake.invocations
