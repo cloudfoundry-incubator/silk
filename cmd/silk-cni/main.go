@@ -150,10 +150,14 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 		return err // impossible, skel package asserts JSON is valid
 	}
 
-	networkInfo, err := getNetworkInfo(netConf)
-	if err != nil {
-		return typedError("discover network info", err)
+	networkInfo := daemon.NetworkInfo{
+		OverlaySubnet: "10.255.0.0/22",
+		MTU:           1350,
 	}
+	// networkInfo, err := getNetworkInfo(netConf)
+	// if err != nil {
+	// 	return typedError("discover network info", err)
+	// }
 
 	generator := config.IPAMConfigGenerator{}
 	ipamConfig := generator.GenerateConfig(networkInfo.OverlaySubnet, netConf.Name, netConf.DataDir)
