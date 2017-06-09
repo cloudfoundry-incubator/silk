@@ -256,6 +256,32 @@ var _ = Describe("Silk CNI Integration", func() {
 			mustSucceedInContainer("ping", "-c", "1", "169.254.0.1")
 		})
 
+		Context("when bandwidth limits are set", func() {
+			BeforeEach(func() {
+				cniStdin = cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
+					"bandwidthLimits": map[string]interface{}{
+						"rate":  1000,
+						"burst": 1000,
+					},
+				})
+				sess := startCommandInHost("ADD", cniStdin)
+				Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
+			})
+
+			FIt("limits ingress bandwidth to the container", func() {
+				startTime := time.Now()
+				mustSucceedInFakeHost("ping", "-c", "1", "-s", "1000", "10.255.30.1")
+				Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))
+			})
+
+			It("limits egress bandwidth from the container", func() {
+				startTime := time.Now()
+				mustSucceedInContainer("ping", "-c", "1", "-s", "1000", "169.254.0.1")
+				Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))
+			})
+
+		})
+
 		It("turns off ARP for veth devices", func() {
 			cniStdin = cniConfig(dataDir, datastorePath, daemonPort)
 
@@ -649,15 +675,24 @@ FLANNEL_IPMASQ=false  # we'll ignore this field
 	return tempFile.Name()
 }
 
+func cniConfigWithExtras(dataDir, datastore string, daemonPort int, extras map[string]interface{}) string {
+	conf := map[string]interface{}{
+		"cniVersion": "0.3.1",
+		"name":       "my-silk-network",
+		"type":       "silk",
+		"dataDir":    dataDir,
+		"daemonPort": daemonPort,
+		"datastore":  datastore,
+	}
+	for k, v := range extras {
+		conf[k] = v
+	}
+	confBytes, _ := json.Marshal(conf)
+	return string(confBytes)
+}
+
 func cniConfig(dataDir, datastore string, daemonPort int) string {
-	return fmt.Sprintf(`{
-	"cniVersion": "0.3.1",
-	"name": "my-silk-network",
-	"type": "silk",
-	"dataDir": "%s",
-	"daemonPort": %d,
-	"datastore": "%s"
-}`, dataDir, daemonPort, datastore)
+	return cniConfigWithExtras(dataDir, datastore, daemonPort, nil)
 }
 
 func cniConfigWithSubnetEnv(dataDir, datastore, subnetFile string) string {

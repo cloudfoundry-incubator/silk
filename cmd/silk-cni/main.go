@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/cf-networking-helpers/json_client"
 	"code.cloudfoundry.org/lager"
+	"github.com/vishvananda/netlink"
 
 	"code.cloudfoundry.org/silk/cni/adapter"
 	"code.cloudfoundry.org/silk/cni/config"
@@ -182,6 +183,27 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 	err = p.Host.Setup(cfg)
 	if err != nil {
 		return typedError("set up host", err)
+	}
+
+	// err = exec.Command("tc", "qdisc", "add", "dev", cfg.Host.DeviceName, "root", "tbf",
+	// 	"rate", rateString, "burst", burstString, "latency", "100ms").Run()
+	link, err := netlink.LinkByName(cfg.Host.DeviceName)
+	if err != nil {
+		return typedError("BANANA", err)
+	}
+	qdisc := &netlink.Tbf{
+		QdiscAttrs: netlink.QdiscAttrs{
+			LinkIndex: link.Attrs().Index,
+			Handle:    netlink.MakeHandle(1, 0),
+			Parent:    netlink.HANDLE_ROOT,
+		},
+		Limit:  200000,
+		Rate:   170000,
+		Buffer: 100000,
+	}
+	err = netlink.QdiscAdd(qdisc)
+	if err != nil {
+		return typedError("throttle container ingress", err)
 	}
 
 	err = p.Container.Setup(cfg)
