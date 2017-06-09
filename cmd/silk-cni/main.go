@@ -95,11 +95,17 @@ func main() {
 
 type NetConf struct {
 	types.NetConf
-	DataDir    string `json:"dataDir"`
-	SubnetFile string `json:"subnetFile"`
-	MTU        int    `json:"mtu" validate:"min=0"`
-	Datastore  string `json:"datastore"`
-	DaemonPort int    `json:"daemonPort"`
+	DataDir         string          `json:"dataDir"`
+	SubnetFile      string          `json:"subnetFile"`
+	MTU             int             `json:"mtu" validate:"min=0"`
+	Datastore       string          `json:"datastore"`
+	DaemonPort      int             `json:"daemonPort"`
+	BandwidthLimits BandwidthLimits `json:"bandwidthLimits"`
+}
+
+type BandwidthLimits struct {
+	Rate  int `json:"rate"`
+	Burst int `json:"burst"`
 }
 
 type HostLocalIPAM struct {
@@ -189,6 +195,7 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 	// 	"rate", rateString, "burst", burstString, "latency", "100ms").Run()
 	link, err := netlink.LinkByName(cfg.Host.DeviceName)
 	if err != nil {
+		panic(err)
 		return typedError("BANANA", err)
 	}
 	qdisc := &netlink.Tbf{
@@ -197,14 +204,26 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 			Handle:    netlink.MakeHandle(1, 0),
 			Parent:    netlink.HANDLE_ROOT,
 		},
-		Limit:  200000,
-		Rate:   170000,
-		Buffer: 100000,
+		Limit:  uint32(netConf.BandwidthLimits.Rate / 20),
+		Rate:   uint64(netConf.BandwidthLimits.Rate),  // uint64(netConf.BandwidthLimits.Rate),
+		Buffer: uint32(netConf.BandwidthLimits.Burst), // uint32(netConf.BandwidthLimits.Burst),
 	}
 	err = netlink.QdiscAdd(qdisc)
 	if err != nil {
 		return typedError("throttle container ingress", err)
 	}
+
+	// qdiscs, err := netlink.QdiscList(link)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// var tbf *netlink.Tbf
+	// tbf = qdiscs[0].(*netlink.Tbf)
+	// fmt.Printf("the rate is : %+v", tbf.Rate)
+	// fmt.Printf("the limit is : %+v", tbf.Limit)
+	// fmt.Printf("the buffer is : %+v", tbf.Buffer)
+	// fmt.Printf("the peakrate is : %+v", tbf.Peakrate)
+	// fmt.Printf("the minburst is : %+v", tbf.Minburst)
 
 	err = p.Container.Setup(cfg)
 	if err != nil {

@@ -260,8 +260,60 @@ var _ = Describe("Silk CNI Integration", func() {
 			BeforeEach(func() {
 				cniStdin = cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
 					"bandwidthLimits": map[string]interface{}{
-						"rate":  1000,
-						"burst": 1000,
+						"rate":  125000,
+						"burst": 500000,
+						// "rate":  170000,
+						// "burst": 100000,
+						// Results in
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1360Kbit burst 1088b lat 1.2s
+
+						// "rate":  1000000000, // so this is in bytes. i.e. 10^9 bits is 8 gigabits
+						// "burst": 1048375,
+						// Results in
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 8Gbit burst 67096000b limit 200000b
+
+						// "rate":  1000000000,
+						// "burst": 2000,
+						// qdisc shows burst is 64000 b
+
+						// "rate":  1000000000,
+						// "burst": 2000,
+						// qdisc shows burst is 125Kb
+
+						// "rate":  1000000,
+						// "burst": 2000,
+						// qdisc shows burst is 128Kb
+						// so changing the rate affects the qdisc burst, even if the burst number is the same
+
+						// "rate":  1000000,
+						// "burst": 2000,
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 8Mbit burst 128b lat 199.9ms
+
+						// "rate":  125000000,
+						// "burst": 2000000,
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Gbit burst 15625Kb limit 200000b
+
+						// "rate":  125000,
+						// "burst": 2000,
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Mbit burst 16b lat 1.6s
+
+						// "rate":  125000,
+						// "burst": 10000, // multiplying this by 5 from the previous examples properly multipled qdisc burst by 5
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Mbit burst 80b lat 1.6s
+
+						// "rate":  125000000,
+						// "burst": 10000000,
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Gbit burst 78125Kb limit 200000b
+
+						// "rate":  125000000,
+						// "burst": 10000000,
+						// Limit is 125000000
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Gbit burst 78125Kb lat 360.0ms
+
+						// "rate":  125000000,
+						// "burst": 10000000,
+						// Limit is 250000000 // so changing limit does not seem to affect qdisc burst.
+						// qdisc tbf 1: dev s-010255030001 root refcnt 2 rate 1Gbit burst 78125Kb lat 1.4s
 					},
 				})
 				sess := startCommandInHost("ADD", cniStdin)
@@ -270,8 +322,10 @@ var _ = Describe("Silk CNI Integration", func() {
 
 			FIt("limits ingress bandwidth to the container", func() {
 				startTime := time.Now()
-				mustSucceedInFakeHost("ping", "-c", "1", "-s", "1000", "10.255.30.1")
+				mustSucceedInFakeHost("ping", "-c", "1", "-s", "2000", "10.255.30.1", "-W", "5")
 				Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))
+				// fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "show"))
+				// Expect(true).To(Equal(false))
 			})
 
 			It("limits egress bandwidth from the container", func() {
