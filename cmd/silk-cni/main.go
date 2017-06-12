@@ -193,24 +193,32 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 
 	// err = exec.Command("tc", "qdisc", "add", "dev", cfg.Host.DeviceName, "root", "tbf",
 	// 	"rate", rateString, "burst", burstString, "latency", "100ms").Run()
-	link, err := netlink.LinkByName(cfg.Host.DeviceName)
-	if err != nil {
-		panic(err)
-		return typedError("BANANA", err)
-	}
-	qdisc := &netlink.Tbf{
-		QdiscAttrs: netlink.QdiscAttrs{
-			LinkIndex: link.Attrs().Index,
-			Handle:    netlink.MakeHandle(1, 0),
-			Parent:    netlink.HANDLE_ROOT,
-		},
-		Limit:  uint32(netConf.BandwidthLimits.Rate),
-		Rate:   uint64(netConf.BandwidthLimits.Rate),
-		Buffer: uint32(netConf.BandwidthLimits.Burst),
-	}
-	err = netlink.QdiscAdd(qdisc)
-	if err != nil {
-		return typedError("throttle container ingress", err)
+	if netConf.BandwidthLimits.Rate > 0 && netConf.BandwidthLimits.Burst > 0 {
+		link, err := netlink.LinkByName(cfg.Host.DeviceName)
+		if err != nil {
+			panic(err)
+			return typedError("BANANA", err)
+		}
+		rateInBits := netConf.BandwidthLimits.Rate
+		rateInBytes := rateInBits / 8
+		burstInBits := netConf.BandwidthLimits.Burst
+		bufferInBytes := burstInBits * 1000000000 / rateInBits / 8
+		limitInBytes := rateInBytes / 10
+
+		qdisc := &netlink.Tbf{
+			QdiscAttrs: netlink.QdiscAttrs{
+				LinkIndex: link.Attrs().Index,
+				Handle:    netlink.MakeHandle(1, 0),
+				Parent:    netlink.HANDLE_ROOT,
+			},
+			Limit:  uint32(limitInBytes / 10),
+			Rate:   uint64(rateInBytes),
+			Buffer: uint32(bufferInBytes),
+		}
+		err = netlink.QdiscAdd(qdisc)
+		if err != nil {
+			return typedError("throttle container ingress", err)
+		}
 	}
 
 	err = p.Container.Setup(cfg)

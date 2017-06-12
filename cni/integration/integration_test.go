@@ -257,26 +257,32 @@ var _ = Describe("Silk CNI Integration", func() {
 		})
 
 		Context("when bandwidth limits are set", func() {
+			var rateInBits int
+			var burstInBits int
 			BeforeEach(func() {
-				cniStdin = cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
-					"bandwidthLimits": map[string]interface{}{
-						"rate":  500000,
-						"burst": 200000, // or buffer
-						// (qdisc rate in bits) = (netlink.Rate bytes) * (8 bit / 1 byte)
-						// (qdisc burst in bits) = (netlink.Buffer in bytes) * (8 bit / 1 byte) * (qdisc rate in bits) / 10^9 (where does the / 10^9) come in? I believe this is HZ
-						// latency is proportional to netlink.Limit/netlink.Rate ish? not constant
-					},
-				})
+				rateInBits = 50000
+				burstInBits = 500
+
+				// cniStdin = cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
+				// 	"bandwidthLimits": map[string]interface{}{
+				// 		"rate":  rateInBits,
+				// 		"burst": burstInBits,
+				// 	},
+				// })
 				sess := startCommandInHost("ADD", cniStdin)
 				Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 			})
 
 			FIt("limits ingress bandwidth to the container", func() {
+				// dataBytes := (rateInBits / 8)
+				// fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "show"))
 				// startTime := time.Now()
-				// mustSucceedInFakeHost("ping", "-c", "1", "-s", "2000", "10.255.30.1", "-W", "5")
+				// mustSucceedInFakeHost("ping", "-c", "1", "-s", fmt.Sprintf("%d", dataBytes), "10.255.30.1")
 				// Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))
-				fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "show"))
-				Expect(true).To(Equal(false))
+				mustSucceedInContainer("nc", "-l", "9000")
+
+				// mustSucceedInFakeHost("cat", "/dev/urandom", "|", "head", "-c", "2000", "|", "nc", "10.255.30.1", "9000")
+
 			})
 
 			It("limits egress bandwidth from the container", func() {
@@ -805,10 +811,15 @@ func cniResultForCurrentVersion(output []byte) *current.Result {
 	return result
 }
 
-func mustSucceed(binary string, args ...string) string {
+func mustStart(binary string, args ...string) *gexec.Session {
 	cmd := exec.Command(binary, args...)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
+	return sess
+}
+
+func mustSucceed(binary string, args ...string) string {
+	sess := mustStart(binary, args...)
 	Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 	return string(sess.Out.Contents())
 }
@@ -818,6 +829,12 @@ func mustFailWith(expectedErrorSubstring string, binary string, args ...string) 
 	allOutput, err := cmd.CombinedOutput()
 	Expect(err).To(HaveOccurred())
 	Expect(allOutput).To(ContainSubstring(expectedErrorSubstring))
+}
+
+func mustStartInContainer(binary string, args ...string) *gexec.Session {
+	cmdArgs := []string{"netns", "exec", containerNSName, binary}
+	cmdArgs = append(cmdArgs, args...)
+	return mustStart("ip", cmdArgs...)
 }
 
 func mustSucceedInContainer(binary string, args ...string) string {
