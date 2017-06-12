@@ -204,26 +204,14 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 			Handle:    netlink.MakeHandle(1, 0),
 			Parent:    netlink.HANDLE_ROOT,
 		},
-		Limit:  uint32(netConf.BandwidthLimits.Rate / 20),
-		Rate:   uint64(netConf.BandwidthLimits.Rate),  // uint64(netConf.BandwidthLimits.Rate),
-		Buffer: uint32(netConf.BandwidthLimits.Burst), // uint32(netConf.BandwidthLimits.Burst),
+		Limit:  uint32(netConf.BandwidthLimits.Rate),
+		Rate:   uint64(netConf.BandwidthLimits.Rate),
+		Buffer: uint32(netConf.BandwidthLimits.Burst),
 	}
 	err = netlink.QdiscAdd(qdisc)
 	if err != nil {
 		return typedError("throttle container ingress", err)
 	}
-
-	// qdiscs, err := netlink.QdiscList(link)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// var tbf *netlink.Tbf
-	// tbf = qdiscs[0].(*netlink.Tbf)
-	// fmt.Printf("the rate is : %+v", tbf.Rate)
-	// fmt.Printf("the limit is : %+v", tbf.Limit)
-	// fmt.Printf("the buffer is : %+v", tbf.Buffer)
-	// fmt.Printf("the peakrate is : %+v", tbf.Peakrate)
-	// fmt.Printf("the minburst is : %+v", tbf.Minburst)
 
 	err = p.Container.Setup(cfg)
 	if err != nil {
