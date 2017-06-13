@@ -257,33 +257,71 @@ var _ = Describe("Silk CNI Integration", func() {
 		})
 
 		Context("when bandwidth limits are set", func() {
+			var rateInBytes int
 			var rateInBits int
 			var burstInBits int
+			var packetInBytes int
+			var (
+				containerNSList []ns.NetNS
+			)
 			BeforeEach(func() {
-				rateInBits = 50000
-				burstInBits = 500
+				rateInBytes = 50000
+				rateInBits = rateInBytes * 8
+				burstInBits = rateInBits * 2
+				packetInBytes = rateInBytes * 20
 
-				// cniStdin = cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
-				// 	"bandwidthLimits": map[string]interface{}{
-				// 		"rate":  rateInBits,
-				// 		"burst": burstInBits,
-				// 	},
-				// })
-				sess := startCommandInHost("ADD", cniStdin)
-				Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
+				for i := 0; i < 2; i++ {
+					containerNS, err := ns.NewNS()
+					Expect(err).NotTo(HaveOccurred())
+					containerNSList = append(containerNSList, containerNS)
+				}
+
+				By("creating a container without bandwidth limits", func() {
+					cniEnv["CNI_NETNS"] = containerNSList[0].Path()
+					sess := startCommandInHost("ADD", cniStdin)
+					Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
+				})
+
+				By("creating a container with bandwidth limits", func() {
+					cniStdin := cniConfigWithExtras(dataDir, datastorePath, daemonPort, map[string]interface{}{
+						"bandwidthLimits": map[string]interface{}{
+							"rate":  rateInBits,
+							"burst": burstInBits,
+						},
+					})
+					cniEnv["CNI_NETNS"] = containerNSList[1].Path()
+					sess := startCommandInHost("ADD", cniStdin)
+					Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
+				})
 			})
 
-			FIt("limits ingress bandwidth to the container", func() {
-				// dataBytes := (rateInBits / 8)
-				// fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "show"))
-				// startTime := time.Now()
-				// mustSucceedInFakeHost("ping", "-c", "1", "-s", fmt.Sprintf("%d", dataBytes), "10.255.30.1")
-				// Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))
-				mustSucceedInContainer("nc", "-l", "9000")
-
-				// mustSucceedInFakeHost("cat", "/dev/urandom", "|", "head", "-c", "2000", "|", "nc", "10.255.30.1", "9000")
-
+			AfterEach(func() {
+				for _, containerNS := range containerNSList {
+					containerNS.Close()
+				}
 			})
+
+			FMeasure("limits ingress bandwidth to the container", func(b Benchmarker) {
+				containerNSName = filepath.Base(containerNSList[0].Path())
+				mustStartInContainer("bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
+
+				containerNSName = filepath.Base(containerNSList[1].Path())
+				mustStartInContainer("bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
+
+				runtimeWithoutLimit := b.Time("without limits", func() {
+					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.1 9000", packetInBytes))
+				})
+
+				runtimeWithLimit := b.Time("with limits", func() {
+					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.2 9000", packetInBytes))
+				})
+
+				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+2*time.Second))
+
+				// TODO we should assert this prints out what we expect
+				fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "list"))
+
+			}, 1)
 
 			It("limits egress bandwidth from the container", func() {
 				startTime := time.Now()

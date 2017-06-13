@@ -211,7 +211,7 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 				Handle:    netlink.MakeHandle(1, 0),
 				Parent:    netlink.HANDLE_ROOT,
 			},
-			Limit:  uint32(limitInBytes / 10),
+			Limit:  uint32(limitInBytes),
 			Rate:   uint64(rateInBytes),
 			Buffer: uint32(bufferInBytes),
 		}
