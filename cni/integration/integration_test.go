@@ -257,7 +257,6 @@ var _ = Describe("Silk CNI Integration", func() {
 		})
 
 		Context("when bandwidth limits are set", func() {
-			var rateInBytes int
 			var rateInBits int
 			var burstInBits int
 			var packetInBytes int
@@ -265,7 +264,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				containerNSList []ns.NetNS
 			)
 			BeforeEach(func() {
-				rateInBytes = 50000
+				rateInBytes := 50000
 				rateInBits = rateInBytes * 8
 				burstInBits = rateInBits * 2
 				packetInBytes = rateInBytes * 20
@@ -301,12 +300,15 @@ var _ = Describe("Silk CNI Integration", func() {
 				}
 			})
 
-			FMeasure("limits ingress bandwidth to the container", func(b Benchmarker) {
-				containerNSName = filepath.Base(containerNSList[0].Path())
-				mustStartInContainer("bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
+			Measure("limits ingress bandwidth to the container", func(b Benchmarker) {
+				mustStart("ip", "netns", "exec", filepath.Base(containerNSList[0].Path()),
+					"bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
 
-				containerNSName = filepath.Base(containerNSList[1].Path())
-				mustStartInContainer("bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
+				mustStart("ip", "netns", "exec", filepath.Base(containerNSList[1].Path()),
+					"bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
+
+				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).To(ContainSubstring(
+					"qdisc tbf 1: dev s-010255030002 root refcnt 2 rate 400Kbit burst 800000b limit 5000b"))
 
 				runtimeWithoutLimit := b.Time("without limits", func() {
 					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.1 9000", packetInBytes))
@@ -318,12 +320,18 @@ var _ = Describe("Silk CNI Integration", func() {
 
 				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+2*time.Second))
 
-				// TODO we should assert this prints out what we expect
-				fmt.Println(mustSucceedInFakeHost("tc", "qdisc", "list"))
-
 			}, 1)
 
-			It("limits egress bandwidth from the container", func() {
+			It("deletes the qdisc tbf upon container deletion", func() {
+				cniEnv["CNI_NETNS"] = containerNSList[1].Path()
+				sess := startCommandInHost("DEL", cniStdin)
+				Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
+
+				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).NotTo(ContainSubstring("s-010255030002"))
+
+			})
+
+			PIt("limits egress bandwidth from the container", func() {
 				startTime := time.Now()
 				mustSucceedInContainer("ping", "-c", "1", "-s", "1000", "169.254.0.1")
 				Expect(time.Now()).To(BeTemporally(">", startTime.Add(time.Second)))

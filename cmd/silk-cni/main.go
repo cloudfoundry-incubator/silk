@@ -12,7 +12,6 @@ import (
 
 	"code.cloudfoundry.org/cf-networking-helpers/json_client"
 	"code.cloudfoundry.org/lager"
-	"github.com/vishvananda/netlink"
 
 	"code.cloudfoundry.org/silk/cni/adapter"
 	"code.cloudfoundry.org/silk/cni/config"
@@ -32,14 +31,15 @@ import (
 )
 
 type CNIPlugin struct {
-	HostNSPath      string
-	HostNS          ns.NetNS
-	ConfigCreator   *config.ConfigCreator
-	VethPairCreator *lib.VethPairCreator
-	Host            *lib.Host
-	Container       *lib.Container
-	Store           *datastore.Store
-	Logger          lager.Logger
+	HostNSPath        string
+	HostNS            ns.NetNS
+	ConfigCreator     *config.ConfigCreator
+	VethPairCreator   *lib.VethPairCreator
+	Host              *lib.Host
+	Container         *lib.Container
+	TokenBucketFilter *lib.TokenBucketFilter
+	Store             *datastore.Store
+	Logger            lager.Logger
 }
 
 func main() {
@@ -85,6 +85,9 @@ func main() {
 		Container: &lib.Container{
 			Common:         commonSetup,
 			LinkOperations: linkOperations,
+		},
+		TokenBucketFilter: &lib.TokenBucketFilter{
+			NetlinkAdapter: netlinkAdapter,
 		},
 		Logger: logger,
 		Store:  store,
@@ -191,33 +194,10 @@ func (p *CNIPlugin) cmdAdd(args *skel.CmdArgs) error {
 		return typedError("set up host", err)
 	}
 
-	// err = exec.Command("tc", "qdisc", "add", "dev", cfg.Host.DeviceName, "root", "tbf",
-	// 	"rate", rateString, "burst", burstString, "latency", "100ms").Run()
 	if netConf.BandwidthLimits.Rate > 0 && netConf.BandwidthLimits.Burst > 0 {
-		link, err := netlink.LinkByName(cfg.Host.DeviceName)
+		err = p.TokenBucketFilter.Setup(netConf.BandwidthLimits.Rate, netConf.BandwidthLimits.Burst, cfg)
 		if err != nil {
-			panic(err)
-			return typedError("BANANA", err)
-		}
-		rateInBits := netConf.BandwidthLimits.Rate
-		rateInBytes := rateInBits / 8
-		burstInBits := netConf.BandwidthLimits.Burst
-		bufferInBytes := burstInBits * 1000000000 / rateInBits / 8
-		limitInBytes := rateInBytes / 10
-
-		qdisc := &netlink.Tbf{
-			QdiscAttrs: netlink.QdiscAttrs{
-				LinkIndex: link.Attrs().Index,
-				Handle:    netlink.MakeHandle(1, 0),
-				Parent:    netlink.HANDLE_ROOT,
-			},
-			Limit:  uint32(limitInBytes),
-			Rate:   uint64(rateInBytes),
-			Buffer: uint32(bufferInBytes),
-		}
-		err = netlink.QdiscAdd(qdisc)
-		if err != nil {
-			return typedError("throttle container ingress", err)
+			return typedError("set up tbf", err) // not tested
 		}
 	}
 
