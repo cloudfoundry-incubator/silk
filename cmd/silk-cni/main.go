@@ -38,6 +38,7 @@ type CNIPlugin struct {
 	Host              *lib.Host
 	Container         *lib.Container
 	TokenBucketFilter *lib.TokenBucketFilter
+	HostIFB           *lib.IFB
 	Store             *datastore.Store
 	Logger            lager.Logger
 }
