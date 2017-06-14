@@ -307,6 +307,9 @@ var _ = Describe("Silk CNI Integration", func() {
 				mustStart("ip", "netns", "exec", filepath.Base(containerNSList[1].Path()),
 					"bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
 
+				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).ToNot(ContainSubstring(
+					"qdisc tbf 1: dev s-010255030001 root"))
+
 				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).To(ContainSubstring(
 					"qdisc tbf 1: dev s-010255030002 root refcnt 2 rate 400Kbit burst 800000b limit 5000b"))
 
@@ -319,7 +322,6 @@ var _ = Describe("Silk CNI Integration", func() {
 				})
 
 				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+2*time.Second))
-
 			}, 1)
 
 			It("deletes the qdisc tbf upon container deletion", func() {
