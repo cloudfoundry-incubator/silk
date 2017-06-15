@@ -27,11 +27,13 @@ var _ = Describe("TokenBucketFilter Setup", func() {
 		}
 		fakeNetlinkAdapter = &fakes.NetlinkAdapter{}
 		fakeNetlinkAdapter.LinkByNameReturns(fakeLink, nil)
+		fakeNetlinkAdapter.TickInUsecReturns(15.625)
 		tbf = TokenBucketFilter{
 			NetlinkAdapter: fakeNetlinkAdapter,
 		}
 		cfg = &config.Config{}
 		cfg.Host.DeviceName = "host-device"
+
 	})
 
 	It("creates a qdisc tbf", func() {
@@ -48,10 +50,11 @@ var _ = Describe("TokenBucketFilter Setup", func() {
 				Parent:    netlink.HANDLE_ROOT,
 			},
 			Rate:   uint64(175),
-			Limit:  uint32(17),
+			Limit:  uint32(1417),
 			Buffer: uint32(125000000),
 		}))
 
+		Expect(fakeNetlinkAdapter.TickInUsecCallCount()).To(Equal(2))
 	})
 
 	Context("when getting the link for the host fails", func() {

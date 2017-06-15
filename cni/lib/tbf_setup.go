@@ -12,6 +12,24 @@ type TokenBucketFilter struct {
 	NetlinkAdapter netlinkAdapter
 }
 
+func (tbf *TokenBucketFilter) tick2Time(tick uint32) uint32 {
+	return uint32(float64(tick) / float64(tbf.NetlinkAdapter.TickInUsec()))
+}
+
+func (tbf *TokenBucketFilter) time2Tick(time uint32) uint32 {
+	return uint32(float64(time) * float64(tbf.NetlinkAdapter.TickInUsec()))
+}
+
+func (tbf *TokenBucketFilter) buffer(rate uint64, burst uint32) uint32 {
+	// do reverse of netlink.burst calculation
+	return tbf.time2Tick(uint32(float64(burst) * float64(netlink.TIME_UNITS_PER_SEC) / float64(rate)))
+}
+
+func (tbf *TokenBucketFilter) limit(rate uint64, latency, buffer uint32) uint32 {
+	// do reverse of netlink.latency calculation
+	return uint32(float64(rate) / float64(netlink.TIME_UNITS_PER_SEC) * float64(latency+tbf.tick2Time(buffer)))
+}
+
 func (tbf *TokenBucketFilter) Setup(rateInBits, burstInBits int, cfg *config.Config) error {
 	// Equivalent to
 	// tc qdisc add dev cfg.Host.DeviceName root tbf
@@ -28,8 +46,9 @@ func (tbf *TokenBucketFilter) Setup(rateInBits, burstInBits int, cfg *config.Con
 		return fmt.Errorf("get host device: %s", err)
 	}
 	rateInBytes := rateInBits / 8
-	bufferInBytes := burstInBits * 1000000000 / rateInBits / 8
-	limitInBytes := rateInBytes / 10
+	bufferInBytes := tbf.buffer(uint64(rateInBytes), uint32(burstInBits))
+	latency := uint32(100000) // 100 msec or 100000 usec
+	limitInBytes := tbf.limit(uint64(rateInBytes), latency, uint32(bufferInBytes))
 
 	qdisc := &netlink.Tbf{
 		QdiscAttrs: netlink.QdiscAttrs{

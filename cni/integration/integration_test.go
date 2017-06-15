@@ -267,7 +267,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				rateInBytes := 50000
 				rateInBits = rateInBytes * 8
 				burstInBits = rateInBits * 2
-				packetInBytes = rateInBytes * 20
+				packetInBytes = rateInBytes * 25
 
 				for i := 0; i < 2; i++ {
 					containerNS, err := ns.NewNS()
@@ -311,7 +311,7 @@ var _ = Describe("Silk CNI Integration", func() {
 					"qdisc tbf 1: dev s-010255030001 root"))
 
 				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).To(ContainSubstring(
-					"qdisc tbf 1: dev s-010255030002 root refcnt 2 rate 400Kbit burst 800000b limit 5000b"))
+					"qdisc tbf 1: dev s-010255030002 root refcnt 2 rate 400Kbit burst 800000b lat 100.0ms"))
 
 				runtimeWithoutLimit := b.Time("without limits", func() {
 					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.1 9000", packetInBytes))
@@ -321,7 +321,7 @@ var _ = Describe("Silk CNI Integration", func() {
 					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.2 9000", packetInBytes))
 				})
 
-				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+2*time.Second))
+				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+1500*time.Millisecond))
 			}, 1)
 
 			It("deletes the qdisc tbf upon container deletion", func() {
