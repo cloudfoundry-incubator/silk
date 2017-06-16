@@ -48,7 +48,7 @@ var _ = Describe("DeviceNameGenerator", func() {
 			g := config.DeviceNameGenerator{}
 			name, err := g.GenerateForHostIFB(net.IP{10, 255, 30, 5})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(name).To(Equal("s-010255030005-ifb"))
+			Expect(name).To(Equal("i-010255030005"))
 		})
 
 		Context("when given an IPv6 address", func() {

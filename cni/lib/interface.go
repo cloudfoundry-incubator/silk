@@ -47,6 +47,7 @@ type netlinkAdapter interface {
 	LinkSetNsFd(netlink.Link, int) error
 	RouteAdd(route *netlink.Route) error
 	QdiscAdd(qdisc netlink.Qdisc) error
+	FilterAdd(netlink.Filter) error
 }
 
 //go:generate counterfeiter -o fakes/netNS.go --fake-name NetNS . netNS

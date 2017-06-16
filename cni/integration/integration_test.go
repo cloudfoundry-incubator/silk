@@ -333,6 +333,24 @@ var _ = Describe("Silk CNI Integration", func() {
 
 			})
 
+			FIt("creates the oubound devices and filter", func() {
+				By("creating an IFB device for the bandwidth-limited container", func() {
+					ifbDeviceOutput := mustSucceedInFakeHost("ip", "link", "list", "i-010255030002")
+					Expect(ifbDeviceOutput).To(MatchRegexp(".*UP.*mtu.*1472.*"))
+				})
+
+				By("creating an ingress qdisc on the host", func() {
+					ifbDeviceOutput := mustSucceedInFakeHost("tc", "qdisc", "show")
+					Expect(ifbDeviceOutput).To(MatchRegexp("qdisc.*: dev s-010255030002.*"))
+					Expect(ifbDeviceOutput).To(MatchRegexp("laskdjflaksdjf"))
+				})
+
+				// By("creating a filter on the host device that mirrors traffic to ifb device", func() {
+				// 	ifbDeviceOutput := mustSucceedInFakeHost("tc", "filter", "list")
+				// 	Expect(ifbDeviceOutput).To(MatchRegexp(".*UP.*mtu.*1472.*"))
+				// })
+			})
+
 			PIt("limits egress bandwidth from the container", func() {
 				startTime := time.Now()
 				mustSucceedInContainer("ping", "-c", "1", "-s", "1000", "169.254.0.1")
