@@ -107,8 +107,3 @@ func (tbf *TokenBucketFilter) OutboundSetup(rateInBits, burstInBits int, cfg *co
 	}
 	return nil
 }
-
-func (tbf *TokenBucketFilter) OutboundTeardown() error {
-	// TODO
-	return nil
-}

@@ -40,7 +40,6 @@ type CNIPlugin struct {
 	Container       *lib.Container
 	InboundTBF      *lib.TokenBucketFilter
 	OutboundTBF     *lib.TokenBucketFilter
-	HostIFB         *lib.IFB
 	Store           *datastore.Store
 	Logger          lager.Logger
 }
@@ -86,7 +85,8 @@ func main() {
 			LinkOperations: linkOperations,
 		},
 		IFBCreator: &lib.IFBCreator{
-			NetlinkAdapter: netlinkAdapter,
+			NetlinkAdapter:      netlinkAdapter,
+			DeviceNameGenerator: &config.DeviceNameGenerator{},
 		},
 		Container: &lib.Container{
 			Common:         commonSetup,
@@ -258,6 +258,12 @@ func (p *CNIPlugin) cmdDel(args *skel.CmdArgs) error {
 	if err != nil {
 		p.Logger.Error("open-netns", err)
 		return nil // can't do teardown if no netns
+	}
+
+	err = p.IFBCreator.Teardown(containerNS, args.IfName)
+	if err != nil {
+		p.Logger.Error("delete-ifb", err)
+		// continue, keep trying to cleanup
 	}
 
 	err = p.Container.Teardown(containerNS, args.IfName)

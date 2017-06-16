@@ -277,18 +277,4 @@ var _ = Describe("TokenBucketFilter", func() {
 			})
 		})
 	})
-	Describe("OutboundTeardown", func() {
-		It("removes the ifb device in the specified namespace and device name", func() {
-		})
-		Context("when deleting the link fails", func() {
-			BeforeEach(func() {
-				// TODO
-
-			})
-			It("returns a meaningful error", func() {
-
-			})
-
-		})
-	})
 })
