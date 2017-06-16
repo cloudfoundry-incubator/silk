@@ -12,6 +12,7 @@ import (
 )
 
 var _ = Describe("TokenBucketFilter", func() {
+	// TODO rename this from TokenBucketFilter. maybe make two different structs for outbound and inbound
 
 	var (
 		cfg                *config.Config
@@ -62,7 +63,7 @@ var _ = Describe("TokenBucketFilter", func() {
 			Expect(fakeNetlinkAdapter.QdiscAddArgsForCall(0)).To(Equal(&netlink.Tbf{
 				QdiscAttrs: netlink.QdiscAttrs{
 					LinkIndex: fakeHostDevice.Attrs().Index,
-					Handle:    65536,
+					Handle:    netlink.MakeHandle(1, 0),
 					Parent:    netlink.HANDLE_ROOT,
 				},
 				Rate:   uint64(175),
@@ -125,7 +126,7 @@ var _ = Describe("TokenBucketFilter", func() {
 		})
 	})
 
-	FDescribe("OutboundSetup", func() {
+	Describe("OutboundSetup", func() {
 		It("attaches the ifb device to the host interface then creates a qdisc tbf", func() {
 			Expect(tbf.OutboundSetup(1400, 1400, cfg)).To(Succeed())
 
@@ -137,14 +138,14 @@ var _ = Describe("TokenBucketFilter", func() {
 			Expect(fakeNetlinkAdapter.QdiscAddArgsForCall(0)).To(Equal(&netlink.Ingress{
 				QdiscAttrs: netlink.QdiscAttrs{
 					LinkIndex: fakeHostDevice.Attrs().Index,
-					Handle:    65536,
-					Parent:    netlink.HANDLE_ROOT,
+					Handle:    netlink.MakeHandle(0xffff, 0),
+					Parent:    netlink.HANDLE_INGRESS,
 				},
 			}))
 			Expect(fakeNetlinkAdapter.QdiscAddArgsForCall(1)).To(Equal(&netlink.Tbf{
 				QdiscAttrs: netlink.QdiscAttrs{
 					LinkIndex: fakeIFBDevice.Attrs().Index,
-					Handle:    65536,
+					Handle:    netlink.MakeHandle(1, 0),
 					Parent:    netlink.HANDLE_ROOT,
 				},
 				Rate:   uint64(175),
@@ -152,21 +153,21 @@ var _ = Describe("TokenBucketFilter", func() {
 				Buffer: uint32(125000000),
 			}))
 
-			// tc filter add dev ${network_host_iface} parent ffff: protocol all u32 match ip src 0.0.0.0/0 action mirred egress redirect dev ${network_ifb_iface}
 			Expect(fakeNetlinkAdapter.FilterAddCallCount()).To(Equal(1))
-			// TODO don't know if this is right, let integration catch this if it's wrong:
 			Expect(fakeNetlinkAdapter.FilterAddArgsForCall(0)).To(Equal(&netlink.U32{
 				FilterAttrs: netlink.FilterAttrs{
 					LinkIndex: fakeHostDevice.Attrs().Index,
-					Handle:    65536,
-					Parent:    netlink.HANDLE_ROOT,
+					Handle:    0,
+					Parent:    netlink.MakeHandle(0xffff, 0),
+					Priority:  1,
 					Protocol:  syscall.ETH_P_ALL,
-					// match ip?
 				},
+				ClassId:    netlink.MakeHandle(1, 1),
+				RedirIndex: 43,
 				Actions: []netlink.Action{
 					&netlink.MirredAction{
 						ActionAttrs:  netlink.ActionAttrs{},
-						MirredAction: netlink.TCA_EGRESS_MIRROR | netlink.TCA_EGRESS_REDIR,
+						MirredAction: netlink.TCA_EGRESS_REDIR,
 						Ifindex:      fakeIFBDevice.Attrs().Index,
 					},
 				},
@@ -274,6 +275,20 @@ var _ = Describe("TokenBucketFilter", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("create ifb qdisc: create qdisc: banana"))
 			})
+		})
+	})
+	Describe("OutboundTeardown", func() {
+		It("removes the ifb device in the specified namespace and device name", func() {
+		})
+		Context("when deleting the link fails", func() {
+			BeforeEach(func() {
+				// TODO
+
+			})
+			It("returns a meaningful error", func() {
+
+			})
+
 		})
 	})
 })

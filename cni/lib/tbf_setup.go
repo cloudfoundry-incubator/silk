@@ -67,11 +67,10 @@ func (tbf *TokenBucketFilter) OutboundSetup(rateInBits, burstInBits int, cfg *co
 	ingress := &netlink.Ingress{
 		QdiscAttrs: netlink.QdiscAttrs{
 			LinkIndex: hostDevice.Attrs().Index,
-			Handle:    netlink.MakeHandle((1<<16)-1, 0), // ffff:
+			Handle:    netlink.MakeHandle(0xffff, 0), // ffff:
 			Parent:    netlink.HANDLE_INGRESS,
 		},
 	}
-	fmt.Println(fmt.Sprintf(">>>>>>>>%+#v", ingress))
 
 	err = tbf.NetlinkAdapter.QdiscAdd(ingress)
 	if err != nil {
@@ -82,14 +81,16 @@ func (tbf *TokenBucketFilter) OutboundSetup(rateInBits, burstInBits int, cfg *co
 	filter := &netlink.U32{
 		FilterAttrs: netlink.FilterAttrs{
 			LinkIndex: hostDevice.Attrs().Index,
-			Handle:    65536,
-			Parent:    netlink.HANDLE_ROOT,
+			Parent:    ingress.QdiscAttrs.Handle,
+			Priority:  1,
 			Protocol:  syscall.ETH_P_ALL,
 		},
+		ClassId:    netlink.MakeHandle(1, 1),
+		RedirIndex: ifbDevice.Attrs().Index,
 		Actions: []netlink.Action{
 			&netlink.MirredAction{
 				ActionAttrs:  netlink.ActionAttrs{},
-				MirredAction: netlink.TCA_EGRESS_MIRROR | netlink.TCA_EGRESS_REDIR,
+				MirredAction: netlink.TCA_EGRESS_REDIR,
 				Ifindex:      ifbDevice.Attrs().Index,
 			},
 		},
@@ -104,5 +105,10 @@ func (tbf *TokenBucketFilter) OutboundSetup(rateInBits, burstInBits int, cfg *co
 	if err != nil {
 		return fmt.Errorf("create ifb qdisc: %s", err)
 	}
+	return nil
+}
+
+func (tbf *TokenBucketFilter) OutboundTeardown() error {
+	// TODO
 	return nil
 }
