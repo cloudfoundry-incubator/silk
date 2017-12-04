@@ -21,7 +21,6 @@ var _ = Describe("ConfigCreator", func() {
 			containerNS                  *fakes.NetNS
 			hostMAC                      net.HardwareAddr
 			containerMAC                 net.HardwareAddr
-			hostIPAddress                net.IP
 			addCmdArgs                   *skel.CmdArgs
 			ipamResult                   *current.Result
 			fakeNamespaceAdapter         *fakes.NamespaceAdapter
@@ -44,6 +43,7 @@ var _ = Describe("ConfigCreator", func() {
 							IP:   []byte{123, 124, 125, 126},
 							Mask: []byte{255, 255, 255, 255},
 						},
+						Gateway: net.IP{10, 255, 0, 1},
 					},
 				},
 				Routes: []*types.Route{
@@ -62,7 +62,6 @@ var _ = Describe("ConfigCreator", func() {
 					},
 				},
 			}
-			hostIPAddress = net.IP{169, 254, 0, 1}
 			fakeNamespaceAdapter = &fakes.NamespaceAdapter{}
 			fakeHardwareAddressGenerator = &fakes.HardwareAddressGenerator{}
 			fakeDeviceNameGenerator = &fakes.DeviceNameGenerator{}
@@ -91,8 +90,25 @@ var _ = Describe("ConfigCreator", func() {
 			Expect(conf.Container.Namespace).To(Equal(containerNS))
 			Expect(conf.Container.Address.IP).To(Equal(ipamResult.IPs[0].Address.IP))
 			Expect(conf.Container.Address.Hardware).To(Equal(containerMAC))
-			Expect(conf.Container.Routes).To(Equal(ipamResult.Routes))
-			Expect(conf.Container.MTU).To(Equal(1450))
+			By("Adding the gateway of the first IP to routes without a gateway", func() {
+				Expect(conf.Container.Routes).To(ConsistOf([]*types.Route{
+					&types.Route{
+						Dst: net.IPNet{
+							IP:   []byte{100, 101, 102, 103},
+							Mask: []byte{255, 255, 255, 255},
+						},
+						GW: net.IP{10, 255, 0, 1},
+					},
+					&types.Route{
+						Dst: net.IPNet{
+							IP:   []byte{200, 201, 202, 203},
+							Mask: []byte{255, 255, 255, 255},
+						},
+						GW: net.IP{10, 255, 30, 5},
+					},
+				}))
+				Expect(conf.Container.MTU).To(Equal(1450))
+			})
 		})
 
 		It("creates a config with the desired host device metadata", func() {
@@ -101,7 +117,7 @@ var _ = Describe("ConfigCreator", func() {
 
 			Expect(conf.Host.DeviceName).To(Equal("s-010255030004"))
 			Expect(conf.Host.Namespace).To(Equal(hostNS))
-			Expect(conf.Host.Address.IP).To(Equal(hostIPAddress))
+			Expect(conf.Host.Address.IP).To(Equal(net.IP{10, 255, 0, 1}))
 			Expect(conf.Host.Address.Hardware).To(Equal(hostMAC))
 		})
 

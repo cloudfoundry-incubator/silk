@@ -20,16 +20,14 @@ var _ = Describe("Ipam config generation", func() {
 				CNIVersion: "0.3.0",
 				Name:       "some-network-name",
 				IPAM: config.IPAM{
-					Type:    "host-local",
-					Subnet:  "10.255.30.0/24",
-					Gateway: "169.254.0.1",
+					Type:   "host-local",
+					Subnet: "10.255.30.0/24",
 					Routes: []*types.Route{
 						&types.Route{
 							Dst: net.IPNet{
 								IP:   net.IPv4zero,
 								Mask: net.CIDRMask(0, 32),
 							},
-							GW: net.ParseIP("169.254.0.1"),
 						},
 					},
 					DataDir: "/some/data/dir/ipam",

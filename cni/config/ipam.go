@@ -7,10 +7,11 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 )
 
+// TODO use IPAMConfig struct in ipam plugin
 type IPAM struct {
 	Type    string         `json:"type"`
 	Subnet  string         `json:"subnet"`
-	Gateway string         `json:"gateway"`
+	Gateway string         `json:"gateway,omitempty"`
 	Routes  []*types.Route `json:"routes"`
 	DataDir string         `json:"dataDir"`
 }
@@ -28,16 +29,14 @@ func (IPAMConfigGenerator) GenerateConfig(subnet, network, dataDirPath string) *
 		CNIVersion: "0.3.0",
 		Name:       network,
 		IPAM: IPAM{
-			Type:    "host-local",
-			Subnet:  subnet,
-			Gateway: "169.254.0.1",
+			Type:   "host-local",
+			Subnet: subnet,
 			Routes: []*types.Route{
 				&types.Route{
 					Dst: net.IPNet{
 						IP:   net.IPv4zero,
 						Mask: net.CIDRMask(0, 32),
 					},
-					GW: net.ParseIP("169.254.0.1"),
 				},
 			},
 			DataDir: filepath.Join(dataDirPath, "ipam"),

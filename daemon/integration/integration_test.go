@@ -280,7 +280,7 @@ var _ = Describe("Daemon Integration", func() {
 
 			By("checking the arp fdb and routing are correct")
 			routes := mustSucceed("ip", "route", "list", "dev", vtepName)
-			Expect(routes).To(ContainSubstring(`10.255.0.0/16  proto kernel  scope link  src ` + overlayVtepIP.String()))
+			Expect(routes).To(ContainSubstring(`10.255.0.0/16.*proto.*kernel.*scope.*link.*src.*` + overlayVtepIP.String()))
 			Expect(routes).To(ContainSubstring(remoteOverlaySubnet + ` via ` + remoteOverlayVtepIP.String() + `  src ` + overlayVtepIP.String()))
 
 			arpEntries := mustSucceed("ip", "neigh", "list", "dev", vtepName)
@@ -316,7 +316,7 @@ var _ = Describe("Daemon Integration", func() {
 				Eventually(string(session.Out.Contents()), "5s").Should(ContainSubstring(`silk-daemon.converge-leases","log_level":0,"data":{"leases":[{"underlay_ip":"127.0.0.1","overlay_subnet":"` + overlaySubnet + `","overlay_hardware_addr":"ee:ee:0a:ff:1e:00"},{"underlay_ip":"172.17.0.5","overlay_subnet":"` + remoteOverlaySubnet + `","overlay_hardware_addr":"ee:ee:0a:ff:28:00"}]}}`))
 
 				routes := mustSucceed("ip", "route", "list", "dev", vtepName)
-				Expect(routes).To(ContainSubstring(`10.255.0.0/16  proto kernel  scope link  src ` + overlayVtepIP.String()))
+				Expect(routes).To(ContainSubstring(`10.255.0.0/16.*proto.*kernel.*scope.*link.*src.*` + overlayVtepIP.String()))
 				Expect(routes).To(ContainSubstring(remoteOverlaySubnet + ` via ` + remoteOverlayVtepIP.String() + `  src ` + overlayVtepIP.String()))
 
 				arpEntries := mustSucceed("ip", "neigh", "list", "dev", vtepName)
@@ -395,8 +395,8 @@ var _ = Describe("Daemon Integration", func() {
 
 				By("checking the arp fdb and routing are correct")
 				routes := mustSucceed("ip", "route", "list", "dev", vtepName)
-				Expect(routes).To(ContainSubstring(`10.255.0.0/16  proto kernel  scope link  src ` + overlayVtepIP.String()))
-				Expect(routes).To(ContainSubstring(remoteOverlaySubnet + ` via ` + remoteOverlayVtepIP.String() + `  src ` + overlayVtepIP.String()))
+				Expect(routes).To(MatchRegexp(`10\.255\.0\.0/16.*proto.*kernel.*scope.*link.*src.*` + overlayVtepIP.String()))
+				Expect(routes).To(MatchRegexp(remoteOverlaySubnet + `.*via.*` + remoteOverlayVtepIP.String() + `.*src.*` + overlayVtepIP.String()))
 
 				arpEntries := mustSucceed("ip", "neigh", "list", "dev", vtepName)
 				Expect(arpEntries).To(ContainSubstring(remoteOverlayVtepIP.String() + " lladdr ee:ee:0a:ff:28:00 PERMANENT"))
