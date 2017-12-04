@@ -133,11 +133,11 @@ var _ = Describe("Silk CNI Integration", func() {
 						{
 								"version": "4",
 								"address": "10.255.30.2/32",
-								"gateway": "10.255.30.1",
+								"gateway": "169.254.0.1",
 								"interface": 1
 						}
 				],
-				"routes": [{"dst": "0.0.0.0/0", "gw": "10.255.30.1"}],
+				"routes": [{"dst": "0.0.0.0/0", "gw": "169.254.0.1"}],
 				"dns": {}
 			}
 			`, inHost[0].Name, containerNS.Path())
@@ -189,6 +189,7 @@ var _ = Describe("Silk CNI Integration", func() {
 			sess := startCommandInHost("ADD", cniStdin)
 			Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 
+			Expect(filepath.Join(dataDir, "ipam/my-silk-network/10.255.30.2")).To(BeAnExistingFile())
 			fakeServer.Interrupt()
 			Eventually(fakeServer, "5s").Should(gexec.Exit())
 
@@ -196,7 +197,7 @@ var _ = Describe("Silk CNI Integration", func() {
 			Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 
 			By("checking that the ip reserved is freed")
-			Expect(filepath.Join(dataDir, "ipam/my-silk-network/10.255.30.1")).NotTo(BeAnExistingFile())
+			Expect(filepath.Join(dataDir, "ipam/my-silk-network/10.255.30.2")).NotTo(BeAnExistingFile())
 		})
 
 		hostLinkFromResult := func(cniResult []byte) netlink.Link {
@@ -223,7 +224,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(hostAddrs).To(HaveLen(1))
-				Expect(hostAddrs[0].IPNet.String()).To(Equal("10.255.30.1/32"))
+				Expect(hostAddrs[0].IPNet.String()).To(Equal("169.254.0.1/32"))
 				Expect(hostAddrs[0].Scope).To(Equal(int(netlink.SCOPE_LINK)))
 				Expect(hostAddrs[0].Peer.String()).To(Equal("10.255.30.2/32"))
 				Expect(hostLink.Attrs().HardwareAddr.String()).To(Equal("aa:aa:0a:ff:1e:02"))
@@ -246,7 +247,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				Expect(containerAddrs).To(HaveLen(1))
 				Expect(containerAddrs[0].IPNet.String()).To(Equal("10.255.30.2/32"))
 				Expect(containerAddrs[0].Scope).To(Equal(int(netlink.SCOPE_LINK)))
-				Expect(containerAddrs[0].Peer.String()).To(Equal("10.255.30.1/32"))
+				Expect(containerAddrs[0].Peer.String()).To(Equal("169.254.0.1/32"))
 				Expect(link.Attrs().HardwareAddr.String()).To(Equal("ee:ee:0a:ff:1e:02"))
 				return nil
 			})
@@ -267,11 +268,10 @@ var _ = Describe("Silk CNI Integration", func() {
 			mustSucceedInFakeHost("ping", "-c", "1", "10.255.30.2")
 
 			By("enabling connectivity from the container to the host")
-			mustSucceedInContainer("ping", "-c", "1", "10.255.30.1")
+			mustSucceedInContainer("ping", "-c", "1", "169.254.0.1")
 		})
 
-		// TODO
-		PContext("when bandwidth limits are set", func() {
+		Context("when bandwidth limits are set", func() {
 			var rateInBits int
 			var burstInBits int
 			var packetInBytes int
@@ -326,17 +326,17 @@ var _ = Describe("Silk CNI Integration", func() {
 					"bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
 
 				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).ToNot(ContainSubstring(
-					"qdisc tbf 1: dev s-010255030001 root"))
+					"qdisc tbf 1: dev s-010255030002 root"))
 
 				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).To(ContainSubstring(
-					"qdisc tbf 1: dev s-010255030002 root refcnt 2 rate 400Kbit burst 800000b lat 25.0ms"))
+					"qdisc tbf 1: dev s-010255030003 root refcnt 2 rate 400Kbit burst 800000b lat 25.0ms"))
 
 				runtimeWithoutLimit := b.Time("without limits", func() {
-					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.1 9000", packetInBytes))
+					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.2 9000", packetInBytes))
 				})
 
 				runtimeWithLimit := b.Time("with limits", func() {
-					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.2 9000", packetInBytes))
+					mustSucceedInFakeHost("bash", "-c", fmt.Sprintf("head -c %d /dev/urandom | nc -w 1 10.255.30.3 9000", packetInBytes))
 				})
 
 				Expect(runtimeWithLimit).To(BeNumerically(">", runtimeWithoutLimit+1000*time.Millisecond))
@@ -347,8 +347,8 @@ var _ = Describe("Silk CNI Integration", func() {
 				sess := startCommandInHost("DEL", cniStdin)
 				Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 
-				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).NotTo(ContainSubstring("s-010255030002"))
-				Expect(mustSucceedInFakeHost("ip", "link", "list")).NotTo(ContainSubstring("i-010255030002"))
+				Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).NotTo(ContainSubstring("s-010255030003"))
+				Expect(mustSucceedInFakeHost("ip", "link", "list")).NotTo(ContainSubstring("i-010255030003"))
 			})
 
 			Context("when silk daemon is not running", func() {
@@ -361,8 +361,8 @@ var _ = Describe("Silk CNI Integration", func() {
 					sess := startCommandInHost("DEL", cniStdin)
 					Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
 
-					Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).NotTo(ContainSubstring("s-010255030002"))
-					Expect(mustSucceedInFakeHost("ip", "link", "list")).NotTo(ContainSubstring("i-010255030002"))
+					Expect(mustSucceedInFakeHost("tc", "qdisc", "list")).NotTo(ContainSubstring("s-010255030003"))
+					Expect(mustSucceedInFakeHost("ip", "link", "list")).NotTo(ContainSubstring("i-010255030003"))
 				})
 			})
 
@@ -371,15 +371,15 @@ var _ = Describe("Silk CNI Integration", func() {
 				mustStartInFakeHost("bash", "-c", "while true; do nc -l -p 9000 > /dev/null; done")
 
 				By("creating an IFB device for the bandwidth-limited container", func() {
-					ifbDeviceOutput := mustSucceedInFakeHost("ip", "link", "list", "i-010255030002")
+					ifbDeviceOutput := mustSucceedInFakeHost("ip", "link", "list", "i-010255030003")
 					Expect(ifbDeviceOutput).To(MatchRegexp(".*UP.*mtu.*1472.*"))
 				})
 
 				By("creating an ingress qdisc and tbf qdisc for the bandwidth-limited container", func() {
 					qdiscOutput := mustSucceedInFakeHost("tc", "qdisc", "show")
 					Expect(qdiscOutput).To(MatchRegexp("qdisc.*: dev s-010255030002.*"))
-					Expect(qdiscOutput).To(ContainSubstring("qdisc ingress ffff: dev s-010255030002 parent ffff:fff1 ----------------"))
-					Expect(qdiscOutput).To(ContainSubstring("qdisc tbf 1: dev i-010255030002 root refcnt 2 rate 400Kbit burst 800000b lat 25.0ms"))
+					Expect(qdiscOutput).To(ContainSubstring("qdisc ingress ffff: dev s-010255030003 parent ffff:fff1 ----------------"))
+					Expect(qdiscOutput).To(ContainSubstring("qdisc tbf 1: dev i-010255030003 root refcnt 2 rate 400Kbit burst 800000b lat 25.0ms"))
 				})
 
 				runtimeWithoutLimit := b.Time("without limits", func() {
@@ -433,7 +433,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(neighs).To(HaveLen(1))
-				Expect(neighs[0].IP.String()).To(Equal("10.255.30.1"))
+				Expect(neighs[0].IP.String()).To(Equal("169.254.0.1"))
 				Expect(neighs[0].HardwareAddr.String()).To(Equal("aa:aa:0a:ff:1e:02"))
 				Expect(neighs[0].State).To(Equal(netlink.NUD_PERMANENT))
 
@@ -464,10 +464,10 @@ var _ = Describe("Silk CNI Integration", func() {
 
 				// the route returned by the IPAM result
 				Expect(routes[0].Dst).To(BeNil()) // same as 0.0.0.0/0
-				Expect(routes[0].Gw.String()).To(Equal("10.255.30.1"))
+				Expect(routes[0].Gw.String()).To(Equal("169.254.0.1"))
 
 				// the route created when the address is assigned
-				Expect(routes[1].Dst.String()).To(Equal("10.255.30.1/32"))
+				Expect(routes[1].Dst.String()).To(Equal("169.254.0.1/32"))
 				Expect(routes[1].Gw).To(BeNil())
 
 				return nil
@@ -627,7 +627,7 @@ var _ = Describe("Silk CNI Integration", func() {
 			Expect(result.IPs[0].Version).To(Equal("4"))
 			Expect(*result.IPs[0].Interface).To(Equal(1))
 			Expect(result.IPs[0].Address.String()).To(Equal("10.255.30.2/32"))
-			Expect(result.IPs[0].Gateway.String()).To(Equal("10.255.30.1"))
+			Expect(result.IPs[0].Gateway.String()).To(Equal("169.254.0.1"))
 
 			By("checking that the ip is reserved for the correct container id")
 			bytes, err := ioutil.ReadFile(filepath.Join(dataDir, "ipam/my-silk-network/10.255.30.2"))
@@ -669,7 +669,7 @@ var _ = Describe("Silk CNI Integration", func() {
 			containerMetadata, err = ioutil.ReadFile(datastorePath)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(string(containerMetadata)).NotTo(ContainSubstring("10.255.30.1"))
+			Expect(string(containerMetadata)).NotTo(ContainSubstring("169.254.0.1"))
 		})
 	})
 
@@ -709,7 +709,7 @@ var _ = Describe("Silk CNI Integration", func() {
 				Expect(result.IPs[0].Version).To(Equal("4"))
 				Expect(*result.IPs[0].Interface).To(Equal(1))
 				Expect(result.IPs[0].Address.String()).To(Equal(fmt.Sprintf("10.255.30.%d/32", i+2)))
-				Expect(result.IPs[0].Gateway.String()).To(Equal("10.255.30.1"))
+				Expect(result.IPs[0].Gateway.String()).To(Equal("169.254.0.1"))
 			}
 
 			cniEnv["CNI_NETNS"] = containerNSList[numIPAllocations-1].Path()
@@ -755,11 +755,11 @@ var _ = Describe("Silk CNI Integration", func() {
 						{
 								"version": "4",
 								"address": "10.255.30.2/32",
-								"gateway": "10.255.30.1",
+								"gateway": "169.254.0.1",
 								"interface": 1
 						}
 				],
-				"routes": [{"dst": "0.0.0.0/0", "gw": "10.255.30.1"}],
+				"routes": [{"dst": "0.0.0.0/0", "gw": "169.254.0.1"}],
 				"dns": {}
 			}
 			`, inHost[0].Name, containerNS.Path())

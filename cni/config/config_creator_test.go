@@ -46,21 +46,7 @@ var _ = Describe("ConfigCreator", func() {
 						Gateway: net.IP{10, 255, 0, 1},
 					},
 				},
-				Routes: []*types.Route{
-					&types.Route{
-						Dst: net.IPNet{
-							IP:   []byte{100, 101, 102, 103},
-							Mask: []byte{255, 255, 255, 255},
-						},
-					},
-					&types.Route{
-						Dst: net.IPNet{
-							IP:   []byte{200, 201, 202, 203},
-							Mask: []byte{255, 255, 255, 255},
-						},
-						GW: net.IP{10, 255, 30, 5},
-					},
-				},
+				Routes: nil,
 			}
 			fakeNamespaceAdapter = &fakes.NamespaceAdapter{}
 			fakeHardwareAddressGenerator = &fakes.HardwareAddressGenerator{}
@@ -90,21 +76,14 @@ var _ = Describe("ConfigCreator", func() {
 			Expect(conf.Container.Namespace).To(Equal(containerNS))
 			Expect(conf.Container.Address.IP).To(Equal(ipamResult.IPs[0].Address.IP))
 			Expect(conf.Container.Address.Hardware).To(Equal(containerMAC))
-			By("Adding the gateway of the first IP to routes without a gateway", func() {
+			By("Adding a route with 169.254.0.1 as the gateway", func() {
 				Expect(conf.Container.Routes).To(ConsistOf([]*types.Route{
 					&types.Route{
 						Dst: net.IPNet{
-							IP:   []byte{100, 101, 102, 103},
-							Mask: []byte{255, 255, 255, 255},
+							IP:   net.IPv4zero,
+							Mask: net.CIDRMask(0, 32),
 						},
-						GW: net.IP{10, 255, 0, 1},
-					},
-					&types.Route{
-						Dst: net.IPNet{
-							IP:   []byte{200, 201, 202, 203},
-							Mask: []byte{255, 255, 255, 255},
-						},
-						GW: net.IP{10, 255, 30, 5},
+						GW: net.IP{169, 254, 0, 1},
 					},
 				}))
 				Expect(conf.Container.MTU).To(Equal(1450))
@@ -117,7 +96,7 @@ var _ = Describe("ConfigCreator", func() {
 
 			Expect(conf.Host.DeviceName).To(Equal("s-010255030004"))
 			Expect(conf.Host.Namespace).To(Equal(hostNS))
-			Expect(conf.Host.Address.IP).To(Equal(net.IP{10, 255, 0, 1}))
+			Expect(conf.Host.Address.IP).To(Equal(net.IP{169, 254, 0, 1}))
 			Expect(conf.Host.Address.Hardware).To(Equal(hostMAC))
 		})
 

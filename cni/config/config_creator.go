@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/containernetworking/cni/pkg/skel"
+	"github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ns"
 )
@@ -74,17 +75,20 @@ func (c *ConfigCreator) Create(hostNS netNS, addCmdArgs *skel.CmdArgs, ipamResul
 	}
 
 	conf.Host.Namespace = hostNS
-	conf.Host.Address.IP = ipamResult.IPs[0].Gateway
+	conf.Host.Address.IP = net.IP{169, 254, 0, 1}
 	conf.Host.Address.Hardware, err = c.HardwareAddressGenerator.GenerateForHost(conf.Container.Address.IP)
 	if err != nil {
 		return nil, fmt.Errorf("generating host veth hardware address: %s", err)
 	}
 
-	conf.Container.Routes = ipamResult.Routes
-	for _, route := range conf.Container.Routes {
-		if route.GW == nil {
-			route.GW = conf.Host.Address.IP
-		}
+	conf.Container.Routes = []*types.Route{
+		{
+			Dst: net.IPNet{
+				IP:   net.IPv4zero,
+				Mask: net.CIDRMask(0, 32),
+			},
+			GW: []byte{169, 254, 0, 1},
+		},
 	}
 
 	conf.IFB.DeviceName, err = c.DeviceNameGenerator.GenerateForHostIFB(conf.Container.Address.IP)
