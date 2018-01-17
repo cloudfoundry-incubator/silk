@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"net"
+
 	"code.cloudfoundry.org/silk/cni/config"
 	"github.com/containernetworking/cni/pkg/types"
 	. "github.com/onsi/ginkgo"
@@ -17,6 +19,9 @@ var _ = Describe("Ipam config generation", func() {
 		subnetAsIPNet, err := types.ParseCIDR("10.255.30.0/24")
 		Expect(err).NotTo(HaveOccurred())
 
+		startIP := net.ParseIP("10.255.30.1").To4()
+		endIP := net.ParseIP("10.255.30.255").To4()
+
 		Expect(ipamConfig).To(Equal(
 			&config.HostLocalIPAM{
 				CNIVersion: "0.3.1",
@@ -26,10 +31,13 @@ var _ = Describe("Ipam config generation", func() {
 					Ranges: []config.RangeSet{
 						[]config.Range{
 							{
-								Subnet: types.IPNet(*subnetAsIPNet),
+								Subnet:     types.IPNet(*subnetAsIPNet),
+								RangeStart: startIP,
+								RangeEnd:   endIP,
+								Gateway:    endIP,
 							},
 						}},
-					Routes: []*types.Route{},
+					Routes:  []*types.Route{},
 					DataDir: "/some/data/dir/ipam",
 				},
 			}))

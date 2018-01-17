@@ -107,7 +107,7 @@ var _ = Describe("Silk CNI Integration", func() {
 			cniStdin = cniConfig(dataDir, datastorePath, daemonPort)
 		})
 
-		It("returns the expected CNI result", func() {
+		FIt("returns the expected CNI result", func() {
 			By("calling ADD")
 			sess := startCommandInHost("ADD", cniStdin)
 			Eventually(sess, cmdTimeout).Should(gexec.Exit(0))
@@ -121,18 +121,18 @@ var _ = Describe("Silk CNI Integration", func() {
 				"interfaces": [
 						{
 								"name": "%s",
-								"mac": "aa:aa:0a:ff:1e:02"
+								"mac": "aa:aa:0a:ff:1e:01"
 						},
 						{
 								"name": "eth0",
-								"mac": "ee:ee:0a:ff:1e:02",
+								"mac": "ee:ee:0a:ff:1e:01",
 								"sandbox": "%s"
 						}
 				],
 				"ips": [
 						{
 								"version": "4",
-								"address": "10.255.30.2/32",
+								"address": "10.255.30.1/32",
 								"gateway": "169.254.0.1",
 								"interface": 1
 						}
