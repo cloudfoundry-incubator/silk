@@ -242,34 +242,33 @@ var _ = Describe("Daemon Integration", func() {
 		Eventually(fakeMetron.AllEvents, "5s").Should(ContainElement(withName("renewFailure")))
 	})
 
-	FContext("when custom_underlay_interface_name is specified", func() {
+	Context("when custom_underlay_interface_name is specified", func() {
 		var (
-			dummyName string
-			dummyLink netlink.Link
+			dummyName      string
+			dummyInterface *net.Interface
 		)
 		BeforeEach(func() {
+			var err error
+
 			dummyName = "eth1"
 			daemonConf.CustomUnderlayInterfaceName = dummyName
-			dummyLink = &netlink.Dummy{
-				LinkAttrs: netlink.LinkAttrs{
-					Name: dummyName,
-				},
-			}
-			err := netlink.LinkAdd(dummyLink)
+			mustSucceed("ip", "link", "add", dummyName, "type", "dummy")
+
+			dummyInterface, err = net.InterfaceByName("eth1")
 			Expect(err).NotTo(HaveOccurred())
+
+			stopDaemon()
 		})
 		AfterEach(func() {
-			// TODO set eth1 down
-			err := netlink.LinkDel(dummyLink)
-			Expect(err).NotTo(HaveOccurred())
+			mustSucceed("ip", "link", "delete", dummyName)
 		})
-		It("sets the vtep device index to the index of interface specified", func() {
+		It("attaches the vtep device to the interface specified", func() {
+			startAndWaitForDaemon()
 			link, err := netlink.LinkByName(vtepName)
 			Expect(err).NotTo(HaveOccurred())
-			vtep := link.(*netlink.Vxlan)
 
-			By("asserting the vtep connects to the eth1 interface")
-			Expect(vtep.VtepDevIndex).To(Equal(dummyLink.Index))
+			vtep := link.(*netlink.Vxlan)
+			Expect(vtep.VtepDevIndex).To(Equal(dummyInterface.Index))
 		})
 	})
 
