@@ -60,6 +60,31 @@ var _ = Describe("CIDRPool", func() {
 			}
 		})
 
+		It("returns a valid pool given an IP that is not the first in the CIDR", func() {
+			subnetRange := "10.255.0.0/12"
+			_, network, _ := net.ParseCIDR(subnetRange)
+			cidrPool := leaser.NewCIDRPool(subnetRange, 24)
+
+			results := map[string]int{}
+
+			var taken []string
+			for i := 0; i < 4095; i++ {
+				s := cidrPool.GetAvailableBlock(taken)
+				results[s]++
+				taken = append(taken, s)
+			}
+			Expect(len(results)).To(Equal(4095))
+
+			for result := range results {
+				_, subnet, err := net.ParseCIDR(result)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(network.Contains(subnet.IP)).To(BeTrue())
+				Expect(subnet.Mask).To(Equal(net.IPMask{255, 255, 255, 0}))
+				// first subnet from range is never allocated
+				Expect(subnet.IP.To4()).NotTo(Equal(network.IP.To4()))
+			}
+		})
+
 		Context("when no subnets are available", func() {
 			It("returns an empty string", func() {
 				subnetRange := "10.255.0.0/16"
