@@ -24,7 +24,7 @@ var _ = Describe("Cidrpool", func() {
 
 	Describe("GetAvailable", func() {
 		It("returns a subnet from the pool that is not taken", func() {
-			subnetRange := "10.255.0.0/16"
+			subnetRange := "10.255.0.0/12"
 			_, network, _ := net.ParseCIDR(subnetRange)
 			cidrPool := leaser.NewCIDRPool(subnetRange, 24)
 

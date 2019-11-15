@@ -16,7 +16,7 @@ type CIDRPool struct {
 }
 
 func NewCIDRPool(subnetRange string, subnetMask int) *CIDRPool {
-	ip, ipCIDR, err := net.ParseCIDR(subnetRange)
+	_, ipCIDR, err := net.ParseCIDR(subnetRange)
 	if err != nil {
 		panic(err)
 	}
@@ -25,7 +25,7 @@ func NewCIDRPool(subnetRange string, subnetMask int) *CIDRPool {
 	mathRand.Seed(getRandomSeed())
 
 	return &CIDRPool{
-		pool: generatePool(ip.String(), uint(cidrMask), uint(subnetMask)),
+		pool: generatePool(ipCIDR.IP.String(), uint(cidrMask), uint(subnetMask)),
 	}
 }
 
