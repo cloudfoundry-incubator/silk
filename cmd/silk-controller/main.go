@@ -24,6 +24,7 @@ import (
 	"code.cloudfoundry.org/silk/controller/leaser"
 	"code.cloudfoundry.org/silk/controller/server_metrics"
 	"github.com/cloudfoundry/dropsonde"
+	"github.com/go-sql-driver/mysql"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
@@ -40,6 +41,14 @@ func main() {
 	if err := mainWithError(); err != nil {
 		log.Fatalf("%s.silk-controller error: %s", logPrefix, err)
 	}
+}
+
+type errLogger struct {
+	innerLogger lager.Logger
+}
+
+func (e errLogger) Print(v ...interface{}) {
+	e.innerLogger.Error("Something-bad", nil, nil)
 }
 
 func mainWithError() error {
@@ -69,6 +78,8 @@ func mainWithError() error {
 		return fmt.Errorf("mutual tls config: %s", err)
 	}
 
+	mysql.SetLogger(errLogger{innerLogger: logger})
+
 	connectionPool, err := db.NewConnectionPool(
 		conf.Database,
 		conf.MaxOpenConnections,
@@ -97,7 +108,7 @@ func mainWithError() error {
 		DatabaseMigrator:              databaseHandler,
 		MaxMigrationAttempts:          5,
 		MigrationAttemptSleepDuration: time.Second,
-		Logger: logger,
+		Logger:                        logger,
 	}
 	if err = migrator.TryMigrations(); err != nil {
 		return fmt.Errorf("migrating database: %s", err)
